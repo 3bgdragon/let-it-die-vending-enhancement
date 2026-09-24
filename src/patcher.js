@@ -61,7 +61,7 @@ function apply(game,backupRoot,{decals=false,ammo=false}={}) {
 }
 function listBackups(root,game){
   if(!fs.existsSync(root))return [];
-  return fs.readdirSync(root,{withFileTypes:true}).filter(x=>x.isDirectory()).map(x=>{
+  return fs.readdirSync(root,{withFileTypes:true}).filter(x=>x.isDirectory()&&!x.name.startsWith('.')).map(x=>{
     const folder=path.resolve(root,x.name);try{
       const manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json'),'utf8'));
       return manifest.game.toLowerCase()===path.resolve(game).toLowerCase()?{folder,manifest}:null;
