@@ -33,10 +33,11 @@ async function main(){
     for(;;){
       console.log('\nLET IT DIE 자판기 강화 — 초기 시험판 '+require('./package.json').version);
       console.log('설치 폴더: '+game);
-      console.log('일일 초기화의 재료 7종 추가 / 5개 묶음 / 희귀도별 가격');
+      console.log('재료 최초 입고 + 기존 일일 갱신 / 최대 7종 / 5개 묶음 / 희귀도별 가격');
+      console.log('첫 실행의 일반 요청 처리 시 재료 이력이 없으면 입고합니다. 재접속·재적용으로 품절을 초기화하지 않습니다.');
       console.log('데칼 교체·탈착: 기존 버섯상점 관리·저장 처리 연결');
       console.log('탄약 충전: 무기 한 자루 완충 / 해당 강화 단계 구입가의 20% / 내구도 유지');
-      console.log('주의: 파일·모의 테스트 완료 / 실게임 구매·재입고·데칼·탄약 저장 미검증');
+      console.log('탄약 충전: 사용자 실게임 동작 확인 / 재접속 유지 및 재료 최초 입고·일일 재입고는 검증 필요');
       console.log('통합 패치: EXE + MASTER DB + BrgGame.upk 변경. 세이브는 직접 수정하지 않습니다.');
       console.log('1. 전체 적용: 재료 상점 + 데칼 교체/탈착 + 탄약 충전 (자동 백업)\n2. 패치 제거 / 적용 전 백업 복원\n3. 백업 목록\n4. 종료\n5. 재료 상점만 적용\n6. 재료 상점 + 데칼만 적용 (탄약 제외)');
       const choice=(await rl.question('선택: ')).trim();
