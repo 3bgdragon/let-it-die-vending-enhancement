@@ -30,7 +30,9 @@ const ammo=(...body)=>when(native(0x77,cast,none),when(eq(asInt(field(cast,vd+'m
 const items=iv(sb+'mItemSelect'),itemCall=(n,...a)=>ctx(items,call(n,...a));
 const pawn=field(ui,'BrgUIManager.mPlayerCommonPawnNative');
 const user=field(ui,'BrgUIManager.mUserData');
-const money=()=>ctx(user,call('GetMoney',val(-1)));
+// The vending UI displays the safe balance, not the active fighter's carried
+// wallet. A fighter in the waiting room normally has GetMoney(-1) == 0.
+const money=()=>ctx(user,call('GetSafeMoney'));
 const possessions=iv(sb+'mPossessionItems');
 const possession=i=>member(ar(possessions,i),pos,'mItemInfo');
 const dbPart=x=>member(member(x,local,'mDbPsPartAutoInfo'),auto,'mDbPart');
@@ -113,7 +115,7 @@ insert(sellFn,0,ammo(setbool(sb+'mRequestBuySE',falsity),
   when(not(gt(capacity(L),val(0))),ret),when(lt(maxSpare(L),val(0)),ret),
   when(lt(rest(L),val(0)),ret),when(lt(spare(L),val(0)),ret),when(not(gt(member(psPart(L),ps,'mDur'),val(0))),ret),
   when(ge(rest(L),capacity(L)),when(ge(spare(L),maxSpare(L)),ret)),
-  when(not(ctx(user,call('SetMoney',minus(money(),charge),val(-1)))),ret),
+  when(not(ctx(user,call('SetSafeMoney',minus(money(),charge)))),ret),
   fill(ar(bag,D)),assign(D,val(0)),loop(lt(D,val(8)),
     when(enabled(ar(equip,D,true)),when(native(0x7a,id(ar(equip,D,true)),id(L)),fill(ar(equip,D,true)))),assign(D,plus(D,val(1)))),
   setbool(sb+'mRequestBuySE',truth),owned('mCommonStatusMenuPart',call('UpdateDispResourceNum')),ret));

@@ -12,13 +12,13 @@ function fixture(stock=[weapon('a')],money=10000){
  const f=object({$class:'BrgUIMenu_ItemVendingMachine',mTopMenuSelectIndex:7,mOtherStateNum:18,mState:31,mStateFirst:false,
   mPossessionItems:stock.map(x=>({mItemInfo:structuredClone(x)})),mSellMenuSelectIndex:0,mSelectPrice:10000,mDbUserShopHistorys:[],
   mItemSelect:object({mUnits:[],mItemMiniPanel:object({})}),mShopLimitedItems:object({}),
-  mUIManager:object({mPlayerCommonPawnNative:native,mUserData:object({money}),mCommonStatusMenuPart:object({}),mItemInfoManager:object({}),mEdgeInput:0,
+  mUIManager:object({mPlayerCommonPawnNative:native,mUserData:object({money,safeMoney:money,carriedMoney:0}),mCommonStatusMenuPart:object({}),mItemInfoManager:object({}),mEdgeInput:0,
     mCommonTopMenu2:object({selected:6,idle:true,cancel:false}),mGameInfoNative:object({hide:false}),mSystemWindow:object({done:false,cancel:false,yes:0})})});
  f.calls=[];
  f.run=(name,locals={})=>execute(compiled.get(name),f,locals,(n,a,target)=>{
   f.calls.push({n,a});
-  if(n==='GetMoney')return target.money;
-  if(n==='SetMoney'){if(target.reject)return false;target.money=a[0];return true;}
+  if(n==='GetSafeMoney')return target.safeMoney;
+  if(n==='SetSafeMoney'){if(target.reject)return false;target.safeMoney=a[0];target.money=a[0];return true;}
   if(n==='AddUnitFromLocalItemInfo'){target.mUnits.push({mInfo:{mBaseInfo:{}},mDrawInfo:{mPrice:0}});return target.mUnits.length-1;}
   if(n==='CreateItemMiniPanelInfo_Part'){a[0].set({mPrice:a[2].buy,mDisableSelect:false});return;}
   if(n==='SetUnitDisableSelectForce'){target.mUnits[a[0]].disabled=a[1];return;}
@@ -79,7 +79,7 @@ test('repeat confirmation, stale quotes, vanished items, money loss or failed de
   if(condition==='repeat')f.run(sb+'SellItem');
   if(condition==='price')f.mSelectPrice++;
   if(condition==='missing')f.mUIManager.mPlayerCommonPawnNative.mDeathBag=[];
-  if(condition==='money')ud.money=9999;
+  if(condition==='money')ud.money=ud.safeMoney=9999;
   if(condition==='reject')ud.reject=true;
   if(condition==='index')f.mSellMenuSelectIndex=-1;
   const before=ud.money;assert.equal(f.run(sb+'SellItem').returned,true);assert.equal(ud.money,before);
@@ -94,7 +94,7 @@ test('actual confirmation script cancels without charging; saves once on accepta
   if(cancel==='yes'){
    assert.equal(f.next,30);assert.equal(f.run(sb+'TickASync').returned,false);
    f.mState=34;assert.equal(f.run(sb+'TickASync').returned,false);
-   assert.equal(f.calls.filter(c=>c.n==='SetMoney').length,1);
+   assert.equal(f.calls.filter(c=>c.n==='SetSafeMoney').length,1);
   }
  }
 });
@@ -114,4 +114,24 @@ test('cancel and sort inputs never enter the destructive sale-sort path',()=>{
   assert.equal(f.mUIManager.mUserData.money,10000);
   assert.ok(!f.calls.some(x=>/SellItem|SortSellItems|Delete/.test(x.n)));
  }
+});
+test('waiting-room regression: bank has money while fighter carries zero',()=>{
+ const f=fixture([weapon('a',60,1053,224515)],1390301);
+ const w=f.mPossessionItems[0].mItemInfo;
+ w.mDbPsPartAutoInfo.mDbPart={mCapacity:120,mSpare:5100,buy:224515};
+ f.mUIManager.mPlayerCommonPawnNative.mDeathBag[0]=structuredClone(w);
+ f.mUIManager.mPlayerCommonPawnNative.mEquipPartInfo[2]=structuredClone(w);
+ f.list();assert.equal(f.mItemSelect.mUnits[0].disabled,false);
+ f.mSelectPrice=44903;f.run(sb+'SellItem');
+ assert.equal(f.mUIManager.mUserData.safeMoney,1345398);
+ assert.equal(f.mUIManager.mUserData.carriedMoney,0);
+ assert.equal(f.mUIManager.mPlayerCommonPawnNative.mDeathBag[0].mDbPsPart.mRest,120);
+ assert.equal(f.mUIManager.mPlayerCommonPawnNative.mDeathBag[0].mDbPsPart.mSpare,5100);
+ assert.ok(!f.calls.some(c=>c.n==='GetMoney'||c.n==='SetMoney'));
+});
+test('carried coins do not substitute for an insufficient safe balance',()=>{
+ const f=fixture([weapon('a')],0);f.mUIManager.mUserData.carriedMoney=100000;
+ f.list();assert.equal(f.mItemSelect.mUnits[0].disabled,true);
+ f.run(sb+'SellItem');assert.equal(f.mUIManager.mUserData.safeMoney,0);
+ assert.equal(f.mUIManager.mUserData.carriedMoney,100000);
 });

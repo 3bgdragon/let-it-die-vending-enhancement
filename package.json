@@ -1,6 +1,6 @@
 {
   "name": "let-it-die-vending-enhancement",
-  "version": "0.4.0-alpha.1",
+  "version": "0.4.0-alpha.2",
   "private": true,
   "description": "LET IT DIE offline vending-machine enhancement development",
   "engines": { "node": ">=22.5" },
