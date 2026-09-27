@@ -6,17 +6,18 @@
 // does not run in the game process and this module does not modify inventory.
 const PURCHASE_PRICE_DIVISOR = 5;
 const MAX_ENGINE_INT = 0x7fffffff;
+const { text: t } = require('./language');
 
 function nonnegativeInt(value, label) {
   if (!Number.isInteger(value) || value < 0 || value > MAX_ENGINE_INT) {
-    throw new RangeError(`${label}: 유효한 게임 정수 값이 필요합니다`);
+    throw new RangeError(`${label}: ` + t('유효한 게임 정수 값이 필요합니다', 'a valid game integer is required'));
   }
   return value;
 }
 
 function refillPrice(purchasePrice) {
-  nonnegativeInt(purchasePrice, '구입가');
-  if (purchasePrice === 0) throw new RangeError('구입가를 확인할 수 없어 충전할 수 없습니다');
+  nonnegativeInt(purchasePrice, t('구입가', 'Purchase price'));
+  if (purchasePrice === 0) throw new RangeError(t('구입가를 확인할 수 없어 충전할 수 없습니다', 'Cannot refill: purchase price is unknown'));
   // Avoid (price + 4) / 5: that would overflow the engine's signed int32.
   return Math.floor(purchasePrice / PURCHASE_PRICE_DIVISOR)
     + (purchasePrice % PURCHASE_PRICE_DIVISOR === 0 ? 0 : 1);

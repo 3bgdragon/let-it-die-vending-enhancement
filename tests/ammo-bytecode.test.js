@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {compile,execute}=require('./helpers/bytecode-vm');
-const plan=require('../patches/vending-build25386710.json');
+const plan=require('../src/game-language').localizePlan(require('../patches/vending-build25386710.json'),process.env.LID_TEST_GAME_LANGUAGE||'ko');
 const sb='BrgUIMenu_ShopBase.',vd='BrgUIMenu_ItemVendingMachine.';
 const compiled=new Map(plan.patches.filter(p=>p.name!==vd+'SetupTopMenu').map(p=>[p.name,compile(p,plan.testSymbols)]));
 function weapon(id,rest=0,spare=0,buy=50000){return {mEnable:true,mItemType:0,mDbPsPart:{mEptid:id,mPtid:'weapon',mLvl:20,mRest:rest,mSpare:spare,mDur:900},mDbPsPartAutoInfo:{mDbPart:{mCapacity:30,mSpare:270,buy}}};}

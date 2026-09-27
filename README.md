@@ -1,110 +1,47 @@
-# LET IT DIE 자판기 강화 모드 — v1.0.0
+# LET IT DIE Vending Machine Enhancement
 
-Node.js 22.5 이상으로 실행하는 **Steam 오프라인판 자판기 강화 패치툴**입니다.
-Steam 빌드 25386710 기준입니다. **재료 최초 입고·구매와 탄약 충전은 사용자 실게임 확인**을 받았습니다.
-날짜 변경 후 자동 재입고·재접속 저장 유지와 데칼 교체/탈착의 개별 실게임 검증은 별도로 남아 있습니다.
-기존 세이브 멀티툴 등 다른 도구 저장소는 변경하지 않습니다.
+[English](README.md) | [한국어](README.ko.md)
 
-세이브 멀티툴에 요청받았던 킬코인 재료 상점에서 시작한 별도 모드입니다.
-게임 파일·UI 변경까지 필요해 세이브툴과 분리하고, 데칼 관리와 탄약 충전을 함께 넣었습니다.
+Kill Coin material bundles, decal equip/remove management and ammunition refills at vending machines.
 
-## 들어간 기능
+## Requirements
 
-1. 킬코인 일일 재료 상점: 재료 106종 중 최대 7종 추가. 기존 목록에 재료가 없으면 최초 입고합니다.
-   상품당 5개 묶음, 하루 1묶음. 희귀도별 묶음 가격은 `material-prices.json`에서 설정합니다.
-2. 자판기 **데칼 교체 / 탈착** 항목: 기존 버섯상점 SkillPut 화면과
-   파이터 반영·변경 이력 저장 처리를 연결했습니다. 탈착 소모 규칙은 바꾸지 않습니다.
-   저장 완료 또는 변경 없이 취소하면 자판기로 돌아가도록 구현했습니다.
-3. 자판기 **탄약 충전** 항목: 데스백의 탄약형 무기를 선택하고 확인하면 장전탄·예비탄을 완충합니다.
-   비용은 **해당 무기·강화 단계 구입가의 1/5**이며 소수점은 올림합니다. 금고 킬코인을 사용합니다.
-   완충·파손·가격 불명·잔액 부족 무기는 충전을 막습니다. 내구도는 회복하지 않습니다.
-   장착 무기와 데스백 값 동기화 및 기존 저장/재시도 경로를 연결했습니다.
-   재접속 후 저장 유지는 아래 테스트 순서로 확인해 주세요.
+- Steam offline edition of LET IT DIE on Windows.
+- Node.js 22.5 or newer. No npm install is needed for normal use.
+- Support is determined by file/schema checks, not just the displayed game version. Never bypass an unsupported-file error.
 
-현재 블러드늄 상품과 재입고 처리는 변경하지 않습니다. 일일 초기화를 중복 호출하지 않습니다.
-첫 실행의 일반 요청 처리에서 기존 일일 갱신을 먼저 실행하고, 판매 가능 목록과 구매 이력에
-모드 재료 ID가 하나도 없을 때만 재료를 추가합니다. 기존 상품과 구매 이력은 그대로 둡니다.
-이미 재료를 모두 구매했어도 구매 이력이 남아 있으므로 재접속·패치 재적용으로 재입고하지 않습니다.
-이후 재입고는 기존 날짜 변경 처리에 맡깁니다. PC 시계나 세이브 날짜를 조작하지 않습니다.
+## Installation
 
-후보는 게임의 기존 섞기 처리를 거쳐 선정됩니다. 고정 7종을 지정하는 방식이 아니며,
-동일 날짜에는 목록이 유지됩니다. 모든 재료의 출현 확률이 균등한지는 검증하지 않았습니다.
+1. Use **Code → Download ZIP**, then extract the archive.
+2. Back up your save separately and close the game completely.
+3. Run `run-en.bat` for English, or use `run.bat --lang ko` for Korean. If Windows denies Steam-folder write access, run the launcher as administrator.
+4. Read confirmations carefully and keep every backup created by the tool.
 
-## 사용 방법
+Command-line entry: `node --no-warnings tool.js --lang en`.
 
-### 툴 폴더와 분리된 백업
+## Language
 
-백업은 숨김 시스템 폴더가 아니라 **툴 폴더 바로 옆**에 보관합니다.
+Choose **한국어 / English** on first interactive launch, or use menu 7 to change it later.
+`--lang en` and `--lang ko` explicitly select and remember a language.
+The preference is stored in the visible sibling file `let-it-die-tool-settings.json`.
+The selected language controls the installer and newly applied in-game decal/ammo labels. Translations keep string widths, script sizes and branch offsets unchanged; prices and purchase logic are unchanged. To change labels on an already patched game, restore the previous patch safely, then apply in the desired language. Do not bypass restore conflicts.
 
-```text
-Downloads/
-├─ let-it-die-vending-enhancement-main/     ← 새 버전으로 교체 가능
-└─ let-it-die-vending-enhancement-backups/  ← 삭제하지 마세요
-```
+Backups use the visible sibling folder `let-it-die-vending-enhancement-backups`.
+Keep it when replacing the tool. Existing internal backups are verified and copied on startup;
+do this before deleting the old tool folder. Already-deleted backups cannot be recovered automatically.
 
-툴 시작 시 기존 내부 `backups`의 기록·원본 해시를 검사하고 새 위치에 복사합니다.
-원래 백업은 삭제하지 않습니다. **이전 폴더를 삭제하기 전에 최신 버전으로 한 번 실행해
-복사 완료와 3번 백업 목록을 확인하세요.** 이미 삭제된 백업은 자동 복구되지 않습니다.
-새 버전도 같은 상위 폴더에 풀면 폴더 이름과 관계없이 같은 백업을 찾습니다.
-다른 상위 폴더로 옮길 때는 옆의 백업 폴더도 함께 옮겨야 합니다.
-게임 설치 경로별 기록은 구분하며, 화면에 실제 백업 경로를 표시합니다.
-동일 이름의 다른 백업이나 손상된 원본은 덮어쓰지 않고 중단합니다.
+## Important behavior
 
-v1.0.0의 게임 패치는 alpha.3·alpha.4와 같습니다.
-이미 alpha.3 또는 alpha.4를 적용했다면 게임 패치를 재적용할 필요는 없습니다.
+Supported baseline: Steam build 25386710. Changes EXE, masters.db and BrgGame.upk, not saves directly. Up to seven material types from 106 candidates, five per bundle, rarity-based prices. Initial stock checks both availability and purchase history. Ammo refills cost 20% of the weapon’s purchase price at its upgrade level, rounded up, paid from the safe; durability is unchanged.
 
-게임을 완전히 종료하고 `run.bat`을 실행합니다.
+## Backups and compatibility
 
-- **1번**: 재료 상점 + 데칼 교체/탈착 + 탄약 충전 통합 적용, 자동 백업.
-- **2번**: 적용 전 파일로 복원.
-- **3번**: 백업 목록.
-- **5번**: 이전 재료 상점 기능만 적용.
-- **6번**: 재료 상점 + 데칼만 적용 (탄약 제외).
+Do not delete an older tool folder until its backups have been preserved. Backups are local files, not stored on GitHub. Restoring game files does not undo purchased items, spent currency or subsequent save changes. Compatibility with every other mod or installation order is not guaranteed.
 
-처음 적용하는 경우 1번을 사용하세요. alpha.1·alpha.2에서 업데이트하거나 설정 구성을
-바꾸려면 **먼저 2번 복원 후 1번 통합 적용**하세요. alpha.3·alpha.4는 중복 적용하지 마세요.
-다른 설치 경로: `node --no-warnings tool.js --game "설치 폴더"`.
-Program Files 쓰기가 거부되면 관리자 권한으로 실행해야 합니다.
+## Translation status
 
-통합 적용은 **EXE·MASTER DB·BrgGame.upk** 세 파일을 변경합니다.
-세이브를 도구가 직접 수정하지는 않지만, 게임에서 구매·데칼 변경·탄약 충전을 하면 게임이 결과를 저장합니다.
-**파일 패치 복원은 구매·데칼·탄약·킬코인 변경 결과를 되돌리지 않습니다.** 시험 전 세이브도 별도 보관하세요.
+The installer menus, confirmations and known patch/restore errors support both languages.
+Unknown system diagnostics are passed through unchanged and logs retain the original diagnostics.
+Injected decal management, ammo refill and confirmation labels have English variants. Static bytecode tests pass; English in-game layout still needs visual confirmation. Day-change restocking, persistence after restart and individual decal-management behavior still require separate gameplay verification; initial material stock/purchases and ammo refills were user-confirmed. Full history remains in the [Korean guide](README.ko.md). Translation does not add support for new game builds.
 
-## 보호 장치와 제한
-
-- 분석한 실행 파일 SHA-256
-  `b29bf446786aed3c6c47b69e112e4ba6d1e97ed6b7ead791c80754472432ef6a`만 지원합니다.
-  같은 빌드라도 다른 모드로 EXE 해시가 다르면 적용을 거부합니다.
-- 통합 UPK 대상 함수 11개의 원본 해시 검사, 스크립트 길이·분기·export 위치 및 EXE 패키지 해시 연결 갱신.
-- `../let-it-die-vending-enhancement-backups/날짜-ID/`에 원본·해시 자동 보관. 백업 폴더를 유지하세요.
-- 복원은 **전체 파일 백업 방식**입니다. 이후 다른 도구/업데이트가 파일을 변경했다면 덮어쓰지 않습니다.
-  이전 두 파일 백업도 복원합니다. 다른 모드와의 조합 순서·선택적 제거는 아직 미검증입니다.
-- 적용 중 오류가 나면 게임을 실행하지 말고 2번 복원을 시도하세요.
-- 오류는 `logs/error-*.log`에 저장합니다. 미지원 파일은 강제로 적용하지 않습니다.
-- 탄약 메뉴는 일반 상점의 목록 화면만 재사용하며 판매·삭제 처리는 실행하지 않습니다.
-  탄약 메뉴 안의 정렬 키는 무시합니다. 기존 데스백 표시 정렬은 유지합니다.
-
-## 검증 범위
-
-- 실제 게임 파일 **복사본**에서 적용·바이트 단위 복원, 기존 상품 보존,
-  이중 적용 거부, 이후 파일 변경 시 복원 거부 검사. 복사본 시험은 설치 원본을 변경하지 않습니다.
-- 수정 함수 11개 재역분석: 런타임 길이·분기 목적지 검사.
-- 생성한 연결 바이트코드의 메뉴 선택·대기·복귀 52개 모의 시험.
-  엔진 객체/네이티브 저장을 대체한 시험이며 실게임 검증을 대신하지 않습니다.
-- 탄약 생성 바이트코드의 목록 필터·가격·확인/취소·잔액 부족·장착 동기화·중복 차감 방지 모의 시험.
-  실제 엔진의 구입가 계산·데이터베이스 저장을 모의 객체로 대체하므로 실게임 검증과 다릅니다.
-- Node 회귀 35개, 최초 입고 x64 격리 15개, 기존 날짜 분기 7개 및 선정 루프 12개 통과.
-- 사용자 확인: 실제 재료 최초 입고·구매, 탄약 충전 동작.
-- 남은 실게임 확인: 날짜 변경 자동 재입고, 데칼 교체/탈착 개별 동작, 재접속 저장 유지.
-  스크린샷용 수동 재입고는 일일 자동 갱신 검증으로 계산하지 않았습니다.
-
-`npm test`: 기본 회귀 테스트.
-`node --no-warnings tool.js inspect --game "설치 폴더"`: 읽기 전용 조사.
-
-자세한 기록: [데칼 연결](docs/decal-integration.md),
-[일일 선정](docs/daily-verification.md), [구매 처리](docs/purchase-verification.md),
-[탄약 연결](docs/ammo-refill.md), **[실게임 테스트 순서](docs/TESTING.md)**.
-버전 변경: [CHANGELOG](CHANGELOG.md). 배포 글 초안: [디시 게시물](docs/DC-POST.md).
-
-실행용 파일은 `tool.js`, `run.bat`, `src/`, `patches/`, `vendor/`,
-`material-prices.json`입니다. **Node.js만으로 실행**되며 개발 분석기는 필요하지 않습니다.
+For support, include tool version, game build, exact error and relevant logs. Avoid publishing your entire save or unnecessary account identifiers.

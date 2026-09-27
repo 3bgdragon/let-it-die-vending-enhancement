@@ -14,7 +14,7 @@ function patchFunction(original,p){
  return Buffer.concat([header,result,original.subarray(0x30+size)]);
 }
 function patchPackage(source,selectedPlan=plan){
- const plan=selectedPlan;
+ const plan=require('./game-language').localizePlan(selectedPlan);
  const r=reader(source),wanted=new Map(plan.patches.map(p=>[p.export,p])),patches=[];
  let at=source.readUInt32LE(0x25);
  for(let i=1;i<=plan.exportCount;i++){
