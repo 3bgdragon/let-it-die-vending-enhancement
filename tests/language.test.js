@@ -30,14 +30,14 @@ test('known diagnostics translate without altering Korean paths or hashes',t=>{
 test('CLI English and Korean smoke: menu exits without touching dummy game files',t=>{
  const root=temp(t),tool=path.join(root,'tool'),game=path.join(root,'game');
  fs.mkdirSync(tool);
- for(const name of ['tool.js','package.json','material-prices.json','src','patches','vendor'])fs.cpSync(path.join(__dirname,'..',name),path.join(tool,name),{recursive:true});
+ for(const name of ['tool.js','package.json','material-prices.json','src','patches','vendor','shared'])fs.cpSync(path.join(__dirname,'..',name),path.join(tool,name),{recursive:true});
  const files=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
  for(const f of files){fs.mkdirSync(path.dirname(path.join(game,f)),{recursive:true});fs.writeFileSync(path.join(game,f),'not-a-game');}
  for(const lang of ['en','ko']){
   const result=spawnSync(process.execPath,['--no-warnings',path.join(tool,'tool.js'),'--game',game,'--lang',lang],{input:'4\n',encoding:'utf8',timeout:10000,windowsHide:true});
   assert.ifError(result.error);assert.equal(result.status,0,result.stderr);
   assert.ok(result.stdout.includes(lang==='en'?'Vending Machine Enhancement':'자판기 강화'));
-  assert.ok(result.stdout.includes(lang==='en'?'2. Remove patch / restore backup':'2. 패치 제거 / 백업 복원'));
+  assert.ok(result.stdout.includes(lang==='en'?'2. Remove vending only':'2. 자판기만 제거'));
   assert.equal(l.savedLanguage(tool),lang);
   for(const f of files)assert.equal(fs.readFileSync(path.join(game,f),'utf8'),'not-a-game');
  }

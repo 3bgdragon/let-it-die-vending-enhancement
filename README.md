@@ -1,10 +1,37 @@
 # LET IT DIE Vending Machine Enhancement
 
-v1.0.1 fixes executable rejection when package hash links change after applying verified
+## Shared composition preview — 1.1.0-dev
+
+Update **all four tools** together. Each ZIP bundles the same Node.js composition
+kernel; no other checkout or Python is required. For build 25386710, vending is
+validated and separated in a temporary copy, the requested warp/JG/M2G operation
+runs there, and vending is recomposed before verified installation. Independent
+changes are preserved, not overwritten with an old whole-file image. Unknown
+code, damaged receipts and overlapping changes still stop safely.
+
+Keep the visible **`LID-Mod-State` inside the game installation**. It contains
+baselines, recipes, shared backups and deduplicated snapshots; replacing a tool
+folder does not delete it. Old sibling backups are also retained. For an old
+vending installation, close the game and use **option 8** to register a matching
+old backup without modifying game files. Missing/different originals cannot be
+guessed. Other tools discover matching sibling vending backups; the environment
+variable `LID_VENDING_BACKUP_DIR` selects that folder explicitly.
+
+**Option 2 removes vending only**, including its verified 106 material rows while
+preserving other DB rows and mods. Options 1/5/6 change its feature set; identical
+settings do nothing. **Option 9 restores a complete shared snapshot** and refuses
+later changes. Selective removal is different from full restoration. Save files
+and purchase/refill history are never rewritten or reset.
+
+Keep all tools current; old tools do not participate in this protocol. File-copy
+and failure-safety tests do not replace gameplay verification of the new paths.
+Legacy build support remains, but vending composition targets build 25386710.
+
+Historical v1.0.1 fixed executable rejection when package hash links changed after applying verified
 Tengoku/JG/M2G patches on the same build. Native code remains fingerprint-checked and
 linked package files are validated. Full apply/restore and existing-script preservation
 were tested on file copies; this does not guarantee compatibility in every install order.
-Restore still refuses files changed by another tool after the vending patch.
+Full backup restore still refuses later file changes; current option 2 is selective removal instead.
 
 [English](README.md) | [한국어](README.ko.md)
 
@@ -30,9 +57,9 @@ Command-line entry: `node --no-warnings tool.js --lang en`.
 Choose **한국어 / English** on first interactive launch, or use menu 7 to change it later.
 `--lang en` and `--lang ko` explicitly select and remember a language.
 The preference is stored in the visible sibling file `let-it-die-tool-settings.json`.
-The selected language controls the installer and newly applied in-game decal/ammo labels. Translations keep string widths, script sizes and branch offsets unchanged; prices and purchase logic are unchanged. To change labels on an already patched game, restore the previous patch safely, then apply in the desired language. Do not bypass restore conflicts.
+The selected language controls the installer and newly applied in-game decal/ammo labels. Translations keep string widths, script sizes and branch offsets unchanged; prices and purchase logic are unchanged. After registering an existing installation, apply in the desired language to rebuild its labels while preserving other mods. Do not bypass validation conflicts.
 
-Backups use the visible sibling folder `let-it-die-vending-enhancement-backups`.
+Legacy backups use the visible sibling folder `let-it-die-vending-enhancement-backups`; new shared snapshots use the game's `LID-Mod-State/backups`.
 Keep it when replacing the tool. Existing internal backups are verified and copied on startup;
 do this before deleting the old tool folder. Already-deleted backups cannot be recovered automatically.
 

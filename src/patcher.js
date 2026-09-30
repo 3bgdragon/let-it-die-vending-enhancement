@@ -6,6 +6,8 @@ const {patchExecutable,sha}=require('./executable');
 const {planMaterialCatalog}=require('./material-catalog');
 const {patchPackage,linkExecutable}=require('./decal-package');
 const {validatePackageLinks}=require('./executable-links');
+const shared=require('../shared/layers');
+const {text:t}=require('./language');
 const FILES=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
 const PACKAGE='BrgGame/CookedPCConsole/BrgGame.upk';
 function stopped() {
@@ -22,11 +24,11 @@ function replace(file,bytes){
   fs.writeFileSync(temp,bytes,{flag:'wx'});
   try{fs.renameSync(temp,file);}catch(error){fs.unlinkSync(temp);throw error;}
 }
-function apply(game,backupRoot,{decals=false,ammo=false}={}) {
+function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
   if(ammo)decals=true;
   stopped();const files=decals?[...FILES,PACKAGE]:FILES,targets=paths(game,files);ensureDbClosed(targets[1]);
   const originals=targets.map(f=>fs.readFileSync(f));const exe=patchExecutable(originals[0]);
-  if(exe.details.packageLinksChanged)validatePackageLinks(originals[0],path.resolve(game));
+  validatePackageLinks(originals[0],path.resolve(game));
   const upk=decals?patchPackage(originals[2],ammo?require('../patches/vending-build25386710.json'):undefined):null;
   if(decals)exe.output=linkExecutable(exe.output,originals[2],upk);
   exe.details.after=sha(exe.output);
@@ -61,17 +63,37 @@ function apply(game,backupRoot,{decals=false,ammo=false}={}) {
   }catch(error){manifest.status='write-failed';save();throw new Error(error.message+' 백업 복구가 필요할 수 있습니다: '+folder);}
   return {backup:folder,rows:rows.length,decals,ammo};
 }
+function apply(game,backupRoot,{decals=false,ammo=false}={}){
+ if(ammo)decals=true;stopped();shared.adopt(game,process.env.LID_VENDING_BACKUP_DIR||backupRoot);
+ const prior=shared.receipt(game),language=t('ko','en');
+ if(prior&&prior.config.decals===decals&&prior.config.ammo===ammo&&prior.config.language===language){shared.basePair(game,prior);return {changed:false,rows:106,decals,ammo,backup:shared.stateRoot(game)};}
+ const tx=shared.transact(game,'vending',stage=>{
+  if(prior)shared.removeMaterials(stage,prior.config);
+  const base=[fs.readFileSync(path.join(stage,FILES[0])),fs.readFileSync(path.join(stage,PACKAGE))];
+  const result=applyRaw(stage,process.env.LID_SHARED_STAGE_BACKUP,{decals,ammo});
+  const config={decals,ammo,language,rows:shared.materialRows(stage)};
+  return {result,vending:{base,config}};
+ });
+ return {...tx.result,changed:tx.changed,backup:tx.backup};
+}
 function listBackups(root,game){
-  if(!fs.existsSync(root))return [];
-  return fs.readdirSync(root,{withFileTypes:true}).filter(x=>x.isDirectory()&&!x.name.startsWith('.')).map(x=>{
+  const composed=shared.backups(game,'vending').map(folder=>({folder,manifest:JSON.parse(fs.readFileSync(path.join(folder,'manifest.json'),'utf8'))}));
+  if(!fs.existsSync(root))return composed;
+  return [...composed,...fs.readdirSync(root,{withFileTypes:true}).filter(x=>x.isDirectory()&&!x.name.startsWith('.')).map(x=>{
     const folder=path.resolve(root,x.name);try{
       const manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json'),'utf8'));
       return manifest.game.toLowerCase()===path.resolve(game).toLowerCase()?{folder,manifest}:null;
     }catch{return null;}
-  }).filter(Boolean).sort((a,b)=>b.folder.localeCompare(a.folder));
+  }).filter(Boolean).sort((a,b)=>b.folder.localeCompare(a.folder))];
 }
 function restore(game,root){
-  stopped();const entry=listBackups(root,game).find(x=>['applied','prepared','write-failed'].includes(x.manifest.status));
+  shared.adopt(game,process.env.LID_VENDING_BACKUP_DIR||root);
+  if(shared.receipt(game)){
+    const r=shared.receipt(game),tx=shared.transact(game,'vending',stage=>{shared.removeMaterials(stage,r.config);return {vending:null};});
+    return tx.backup;
+  }
+  if(fs.existsSync(path.join(shared.stateRoot(game),'state.json')))return shared.stateRoot(game);
+  stopped();const entry=listBackups(root,game).find(x=>[1,2].includes(x.manifest.version)&&['applied','prepared','write-failed'].includes(x.manifest.status));
   if(!entry)throw new Error('복원 가능한 백업이 없습니다');
   const {manifest,folder}=entry;
   const files=manifest.version===1?FILES:manifest.version===2?[...FILES,PACKAGE]:null;
