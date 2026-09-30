@@ -5,6 +5,7 @@ const {DatabaseSync}=require('node:sqlite');
 const {patchExecutable,sha}=require('./executable');
 const {planMaterialCatalog}=require('./material-catalog');
 const {patchPackage,linkExecutable}=require('./decal-package');
+const {validatePackageLinks}=require('./executable-links');
 const FILES=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
 const PACKAGE='BrgGame/CookedPCConsole/BrgGame.upk';
 function stopped() {
@@ -25,6 +26,7 @@ function apply(game,backupRoot,{decals=false,ammo=false}={}) {
   if(ammo)decals=true;
   stopped();const files=decals?[...FILES,PACKAGE]:FILES,targets=paths(game,files);ensureDbClosed(targets[1]);
   const originals=targets.map(f=>fs.readFileSync(f));const exe=patchExecutable(originals[0]);
+  if(exe.details.packageLinksChanged)validatePackageLinks(originals[0],path.resolve(game));
   const upk=decals?patchPackage(originals[2],ammo?require('../patches/vending-build25386710.json'):undefined):null;
   if(decals)exe.output=linkExecutable(exe.output,originals[2],upk);
   exe.details.after=sha(exe.output);

@@ -62,6 +62,8 @@ const errors=[
  ['잘못된 내보내기 테이블','Invalid export table'],['데칼 함수 누락','Missing decal function'],
  ['데칼 패키지 재검증 실패','Decal package revalidation failed'],['Windows 실행 파일이 아닙니다','Not a Windows executable'],
  ['실행 파일 패키지 해시 테이블 불일치','Executable package hash table mismatch'],
+ ['잘린 실행 파일 패키지 해시: ','Truncated executable package digest: '],
+ ['실행 파일과 패키지의 해시 연결이 다릅니다: ','Executable and package hash links do not match: '],
  ['실행 파일과 BrgGame 패키지의 해시 연결이 다릅니다','Executable and BrgGame package hash links do not match'],
  ['지원하지 않는 UE3 LZO 패키지','Unsupported UE3 LZO package'],['지원하지 않는 패키지 빌드','Unsupported package build'],
  ['잘못된 압축 구간','Invalid compressed region'],['잘못된 LZO 헤더','Invalid LZO header'],

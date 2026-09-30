@@ -9,9 +9,29 @@ const work=path.resolve(__dirname,'../.work');fs.mkdirSync(work,{recursive:true}
 const root=fs.mkdtempSync(path.join(work,'roundtrip-')),copy=path.join(root,'game'),backup=path.join(root,'backups');
 const before=FILES.map(name=>fs.readFileSync(path.join(source,name)));
 FILES.forEach((name,i)=>{const dest=path.join(copy,name);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,before[i]);});
+// Copy linked packages too; modified EXE fingerprints require all links to
+// match actual files before any backup or write is made.
+for(const [file] of Object.values(require('../src/executable-links').PACKAGES)){
+ const name='BrgGame/CookedPCConsole/'+file,from=path.join(source,name),to=path.join(copy,name);
+ if(fs.existsSync(from)&&!fs.existsSync(to)){fs.mkdirSync(path.dirname(to),{recursive:true});fs.copyFileSync(from,to);}
+}
 function rows(file){const db=new DatabaseSync(file,{readOnly:true});try{return db.prepare('SELECT * FROM master_automaticshop_lineup ORDER BY goods_id').all();}finally{db.close();}}
 const originalRows=rows(path.join(copy,FILES[1]));
 const result=apply(copy,backup,{decals,ammo});
+if(decals){
+ const {reader}=require('../src/package-codec'),plan=require(ammo?'../patches/vending-build25386710.json':'../patches/decal-build25386710.json');
+ const input=before[2],output=fs.readFileSync(path.join(copy,PACKAGE)),old=reader(input),next=reader(output);
+ const wanted=new Set(plan.patches.map(p=>p.export)),ranges=[];let slot=input.readUInt32LE(0x25);
+ for(let i=1;i<=plan.exportCount;i++){
+  const entry=old.read(slot,68);if(wanted.has(i))ranges.push([slot+32,slot+40]);slot+=68+entry.readUInt32LE(44)*4;
+ }
+ // Original logical bytes may change only in selected export size/offset fields.
+ for(let i=0;i<old.table.length;i++){
+  const [at,size]=old.table[i],a=Buffer.from(old.chunk(i)),b=Buffer.from(next.chunk(i).subarray(0,size));
+  for(const [lo,hi] of ranges){const start=Math.max(lo,at)-at,end=Math.min(hi,at+size)-at;if(end>start){a.fill(0,start,end);b.fill(0,start,end);}}
+  assert.deepEqual(a,b,'Foreign script changed in chunk '+i);
+ }
+}
 const afterRows=rows(path.join(copy,FILES[1]));
 assert.equal(result.rows,106);
 assert.deepEqual(afterRows.filter(x=>x.goods_id<1900000000),originalRows);
@@ -27,6 +47,9 @@ FILES.forEach((name,i)=>{
  assert.equal(sha(fs.readFileSync(path.join(copy,name))),sha(before[i]));
  assert.equal(sha(fs.readFileSync(path.join(source,name))),sha(before[i]));
 });
+const altered=Buffer.from(before[0]);altered[0x1000]^=1;fs.writeFileSync(exePath,altered);
+assert.throws(()=>apply(copy,backup,{decals,ammo}),/지원하지 않는 실행/);
+assert.deepEqual(fs.readFileSync(exePath),altered);fs.writeFileSync(exePath,before[0]);
 console.log(JSON.stringify({passed:true,decals,ammo,copy,backup:result.backup,added:result.rows,
  existingGoodsUnchanged:true,duplicateApplyRejected:true,foreignChangeRestoreRejected:true,
- restoredByteIdentical:true,sourceUnchanged:true},null,2));
+ foreignScriptsPreserved:decals,unknownCodeRejected:true,restoredByteIdentical:true,sourceUnchanged:true},null,2));

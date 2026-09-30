@@ -2,10 +2,15 @@
 const crypto=require('node:crypto');
 const {buildMaterialGate}=require('./material-selector');
 const {buildMaterialBootstrap}=require('./material-bootstrap');
+const {normalizedExecutable}=require('./executable-links');
 const SUPPORTED='b29bf446786aed3c6c47b69e112e4ba6d1e97ed6b7ead791c80754472432ef6a';
+// Verified build 25386710 with the existing Tengoku native patch. The only
+// permitted variations are linked UPK digests (JG/M2G and menu language).
+const NORMALIZED='9209b02bd5db7291a9d79d4cafec116a1a036b205c60386d60bed1b0f236f826';
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function patchExecutable(input) {
-  if(sha(input)!==SUPPORTED) throw new Error('지원하지 않는 실행 파일입니다. SHA-256: '+sha(input));
+  const exact=sha(input)===SUPPORTED;
+  if(!exact&&sha(normalizedExecutable(input))!==NORMALIZED) throw new Error('지원하지 않는 실행 파일입니다. SHA-256: '+sha(input));
   const pe=input.readUInt32LE(0x3c), count=input.readUInt16LE(pe+6), opt=pe+24;
   if(input.toString('ascii',pe,pe+4)!=='PE\0\0'||input.readUInt16LE(opt)!==0x20b)throw new Error('PE64 형식 불일치');
   const table=opt+input.readUInt16LE(pe+20), header=table+count*40;
@@ -36,6 +41,6 @@ function patchExecutable(input) {
   output.writeUInt32LE(input.readUInt32LE(opt+4)+size,opt+4);output.writeUInt32LE(0,opt+64);
   gate.hook.copy(output,hookAt);gate.code.copy(output,raw);
   bootstrap.hook.copy(output,bootstrapAt);bootstrap.code.copy(output,raw+bootstrap.caveRva-rva);
-  return {output,details:{rva,raw,hookAt,gateSize:gate.code.length,bootstrapAt,bootstrapSize:bootstrap.code.length,before:sha(input),after:sha(output)}};
+  return {output,details:{rva,raw,hookAt,gateSize:gate.code.length,bootstrapAt,bootstrapSize:bootstrap.code.length,packageLinksChanged:!exact,before:sha(input),after:sha(output)}};
 }
 module.exports={patchExecutable,sha};

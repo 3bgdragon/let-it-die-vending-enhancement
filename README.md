@@ -1,5 +1,11 @@
 # LET IT DIE Vending Machine Enhancement
 
+v1.0.1 fixes executable rejection when package hash links change after applying verified
+Tengoku/JG/M2G patches on the same build. Native code remains fingerprint-checked and
+linked package files are validated. Full apply/restore and existing-script preservation
+were tested on file copies; this does not guarantee compatibility in every install order.
+Restore still refuses files changed by another tool after the vending patch.
+
 [English](README.md) | [한국어](README.ko.md)
 
 Kill Coin material bundles, decal equip/remove management and ammunition refills at vending machines.
