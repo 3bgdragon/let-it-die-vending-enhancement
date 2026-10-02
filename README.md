@@ -18,7 +18,7 @@ BrgGame-Steam.exe path, retries invalid paths, and lets Enter cancel.
 Non-interactive CLI use requires a valid --game path. This is not a blanket
 no-validation mode or a guarantee of compatibility with every EXE mod.
 
-## Shared composition preview — 1.1.0-dev
+## Shared composition preview — 1.1.1-dev
 
 Update **all four tools** together. Each ZIP bundles the same Node.js composition
 kernel; no other checkout or Python is required. For build 25386710, vending is

@@ -1,4 +1,4 @@
-# LET IT DIE 자판기 강화 모드 — v1.1.0-dev
+# LET IT DIE 자판기 강화 모드 — v1.1.1-dev
 
 
 ## EXE 검증과 직접 경로 입력

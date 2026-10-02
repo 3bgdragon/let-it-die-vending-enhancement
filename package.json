@@ -1,6 +1,6 @@
 {
   "name": "let-it-die-vending-enhancement",
-  "version": "1.1.0-dev",
+  "version": "1.1.1-dev",
   "private": true,
   "description": "LET IT DIE offline vending enhancement: materials, decal management and ammo refill",
   "engines": { "node": ">=22.5" },
