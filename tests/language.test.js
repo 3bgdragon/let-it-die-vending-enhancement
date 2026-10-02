@@ -30,7 +30,7 @@ test('known diagnostics translate without altering Korean paths or hashes',t=>{
 test('CLI English and Korean smoke: menu exits without touching dummy game files',t=>{
  const root=temp(t),tool=path.join(root,'tool'),game=path.join(root,'game');
  fs.mkdirSync(tool);
- for(const name of ['tool.js','package.json','material-prices.json','src','patches','vendor','shared'])fs.cpSync(path.join(__dirname,'..',name),path.join(tool,name),{recursive:true});
+ for(const name of ['tool.js','game-path.js','package.json','material-prices.json','src','patches','vendor','shared'])fs.cpSync(path.join(__dirname,'..',name),path.join(tool,name),{recursive:true});
  const files=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
  for(const f of files){fs.mkdirSync(path.dirname(path.join(game,f)),{recursive:true});fs.writeFileSync(path.join(game,f),'not-a-game');}
  for(const lang of ['en','ko']){

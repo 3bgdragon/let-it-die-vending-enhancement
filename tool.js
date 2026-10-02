@@ -38,9 +38,7 @@ async function main(){
     const {root,copied}=prepareBackups(__dirname);
     if(copied.length)console.log(t('기존 백업 검증·복사 완료 (원본 유지): ','Existing backups verified and copied (originals kept): ')+copied.length);
     const defaultPath='C:/Program Files (x86)/Steam/steamapps/common/LET IT DIE';
-    let game=args[1]||(fs.existsSync(path.join(defaultPath,FILES[0]))?defaultPath:await rl.question(t('게임 설치 폴더: ','Game installation folder: ')));
-    game=path.resolve(game.trim().replace(/^"(.*)"$/,'$1'));
-    for(const file of FILES)if(!fs.existsSync(path.join(game,file)))throw new Error(t('게임 파일을 찾지 못했습니다: ','Game file not found: ')+file);
+    const game=await require('./game-path').choose({input:args[1],detect:()=>defaultPath,files:FILES,ask:q=>rl.question(q),interactive:true,t});
     for(;;){
       console.log(t('\nLET IT DIE 자판기 강화 — v','\nLET IT DIE Vending Machine Enhancement — v')+require('./package.json').version);
       console.log(t('설치 폴더: ','Game folder: ')+game);
