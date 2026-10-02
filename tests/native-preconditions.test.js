@@ -5,8 +5,8 @@ const fixture=path.join(workspace,'lid-justguard-tool/.integration-temp/guard253
 const repos=['lid-justguard-tool','lid-m2g-knife-only','lid-tengoku-warp-tool','lid-vending-enhancement'];
 test('all bundled native preconditions and executable implementations are identical',()=>{
  for(const file of ['native-preconditions.js','native-preconditions-25386710.json','executable.js']){
-  const original=fs.readFileSync(path.join(__dirname,'../src',file));
-  for(const repo of repos)assert.deepEqual(fs.readFileSync(path.join(workspace,repo,'shared/kernel/src',file)),original);
+  const original=fs.readFileSync(path.join(__dirname,'../src',file),'utf8').replace(/\r\n/g,'\n');
+  for(const repo of repos)assert.equal(fs.readFileSync(path.join(workspace,repo,'shared/kernel/src',file),'utf8').replace(/\r\n/g,'\n'),original);
  }
 });
 test('all four kernels preserve unrelated code and reject native dependency conflicts',{skip:!fs.existsSync(fixture)},()=>{

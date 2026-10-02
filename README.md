@@ -1,5 +1,7 @@
 # LET IT DIE Vending Machine Enhancement
 
+TFC edition: [installation and downloads](tfc/README.md). It is isolated in `tfc/`; do not mix with the standalone launcher.
+
 
 ## EXE validation and manual installation paths
 
