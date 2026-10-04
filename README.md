@@ -1,6 +1,6 @@
 # LET IT DIE Vending Machine Enhancement
 
-TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.0-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
+TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.0-rc.2). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
 
 Compatibility candidate **1.1.2-rc.1**: [rules and test evidence](COMPATIBILITY-VALIDATION.md).
 
