@@ -30,6 +30,11 @@ function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
   const originals=targets.map(f=>fs.readFileSync(f));const exe=patchExecutable(originals[0]);
   validatePackageLinks(originals[0],path.resolve(game));
   const upk=decals?patchPackage(originals[2],ammo?require('../patches/vending-build25386710.json'):undefined):null;
+  if(decals){
+    const owned=require('../shared/owned-functions');
+    owned.verifyTransition(originals[2],upk,'vending','BrgGame.upk');
+    owned.verifyOthers(originals[2],upk,'vending','BrgGame.upk');
+  }
   if(decals)exe.output=linkExecutable(exe.output,originals[2],upk);
   exe.details.after=sha(exe.output);
   const probe=new DatabaseSync(targets[1],{readOnly:true});let rows;
