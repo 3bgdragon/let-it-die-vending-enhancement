@@ -1,6 +1,6 @@
 {
   "name": "lid-vending-enhancement-tfc",
-  "version": "1.2.0-rc.2",
+  "version": "1.2.1-rc.1",
   "private": true,
   "description": "Vending Enhancement — separate TFC distribution; not the standalone tool",
   "engines": {

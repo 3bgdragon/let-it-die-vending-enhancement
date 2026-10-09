@@ -3,7 +3,7 @@
 The query/shuffle and map insertion are outside this test's scope. Rows are
 already ordered, output is preallocated, and candidate-map insertion is stubbed.
 """
-import argparse, hashlib, json, struct, subprocess
+import argparse, hashlib, json, struct, subprocess, os
 from pathlib import Path
 import pefile
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_64, UC_HOOK_CODE
@@ -16,12 +16,14 @@ args = parser.parse_args()
 raw = args.exe.read_bytes()
 pe = pefile.PE(data=raw)
 base = pe.OPTIONAL_HEADER.ImageBase
-start, end = 0x1155c10, 0x1155cd8
+new_build = os.environ.get('LID_NATIVE_BUILD') == '25767944'
+delta = 0xfe0 if new_build else 0
+start, end = 0x1155c10+delta, 0x1155cd8+delta
 code = pe.get_data(start, end-start)
 # Refuse to execute a different layout at these build-specific addresses.
 assert code[:4] == bytes.fromhex('4c8b7dbf')
-assert pe.get_data(0x1155c47, 6) == bytes.fromhex('837840017553')
-assert pe.get_data(0x1155cc1, 5) == bytes.fromhex('e85a50feff')
+assert pe.get_data(0x1155c47+delta, 6) == bytes.fromhex('837840017553')
+assert pe.get_data(0x1155cc1+delta, 5) == bytes.fromhex('e89a48feff' if new_build else 'e85a50feff')
 gate = None
 if args.experimental:
     script = Path(__file__).resolve().parent/'export-material-gate.js'
@@ -57,7 +59,7 @@ def run(rows, limit):
     uc.reg_write(UC_X86_REG_RBX, 0)
     candidates = []
     def hook(machine, address, size, _):
-        if address == base+0x1155cc1:
+        if address == base+0x1155cc1+delta:
             candidates.append(struct.unpack('<I', machine.mem_read(rsp+0x38, 4))[0])
             machine.reg_write(UC_X86_REG_RIP, address+5)
         elif machine.mem_read(address, 1) == b'\xe8':

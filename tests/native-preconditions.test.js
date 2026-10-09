@@ -2,16 +2,18 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const workspace=path.resolve(__dirname,'../..');
 const fixture=path.join(workspace,'lid-justguard-tool/.integration-temp/guard25386710-test-iuKM3H/game/Binaries/Win64/BrgGame-Steam.exe');
-const repos=['lid-justguard-tool','lid-m2g-knife-only','lid-tengoku-warp-tool','lid-vending-enhancement'];
+// Standalone ZIPs deliberately omit tfc/. Compare every included kernel;
+// compare both editions in a source checkout, without requiring the other ZIP.
+const bundledRoots=[path.resolve(__dirname,'../shared/kernel/src'),path.resolve(__dirname,'../tfc/runtime/kernel/src')].filter(p=>fs.existsSync(p));
 test('all bundled native preconditions and executable implementations are identical',()=>{
- for(const file of ['native-preconditions.js','native-preconditions-25386710.json','executable.js']){
+ for(const file of ['native-preconditions.js','native-preconditions-25386710.json','native-preconditions-25767944.json','executable.js','material-selector.js','material-bootstrap.js']){
   const original=fs.readFileSync(path.join(__dirname,'../src',file),'utf8').replace(/\r\n/g,'\n');
-  for(const repo of repos)assert.equal(fs.readFileSync(path.join(workspace,repo,'shared/kernel/src',file),'utf8').replace(/\r\n/g,'\n'),original);
+  for(const root of bundledRoots)assert.equal(fs.readFileSync(path.join(root,file),'utf8').replace(/\r\n/g,'\n'),original);
  }
 });
 test('all four kernels preserve unrelated code and reject native dependency conflicts',{skip:!fs.existsSync(fixture)},()=>{
  const stock=fs.readFileSync(fixture),foreign=Buffer.from(stock);foreign[0x100000]^=1;
- const roots=[path.join(__dirname,'../src'),...repos.map(repo=>path.join(workspace,repo,'shared/kernel/src'))];
+ const roots=[path.join(__dirname,'../src'),...bundledRoots];
  for(const root of roots){
   const native=require(path.join(root,'executable')),pre=require(path.join(root,'native-preconditions'));
   assert.equal(pre.validate(foreign),'stock');const output=native.patchExecutable(foreign).output;

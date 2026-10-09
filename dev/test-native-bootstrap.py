@@ -1,12 +1,15 @@
 """Run generated bootstrap x64, with explicit engine service stubs; no game writes."""
-import json,struct,subprocess
+import json,struct,subprocess,os
 from pathlib import Path
 from unicorn import Uc,UC_ARCH_X86,UC_MODE_64,UC_HOOK_CODE
 from unicorn.x86_const import *
 root=Path(__file__).resolve().parents[1]
-script="const b=require('./src/material-bootstrap').buildMaterialBootstrap(0x3000000);console.log(JSON.stringify({...b,code:b.code.toString('hex')}))"
+new_build = os.environ.get('LID_NATIVE_BUILD') == '25767944'
+script="const s=process.env.LID_NATIVE_BUILD==='25767944'?require('./src/native-preconditions-25767944.json').vending.bootstrap:undefined;const b=require('./src/material-bootstrap').buildMaterialBootstrap(0x3000000,s);console.log(JSON.stringify({...b,code:b.code.toString('hex')}))"
 plan=json.loads(subprocess.check_output(['node','-e',script],cwd=root,text=True))
-BASE=0x140000000;USER=BASE+0x27d3210;ARENA=0x20000000;STOP=ARENA+0xff000
+address_map = {0x27d3210:0x27d4210,0xf8907e0:0xf8917e0,0x134f050:0x1350d30,0x1155960:0x1156940,0x1356b50:0x1358870,0x1bbe0:0x1bce0,0x1bb10:0x1bc10,0xdf5f0:0xe00b0} if new_build else {}
+def addr(a): return address_map.get(a,a)
+BASE=0x140000000;USER=BASE+addr(0x27d3210);ARENA=0x20000000;STOP=ARENA+0xff000
 FIRST=1900000000
 def run(buyable,bought,selected=None,daily_replace=None,invalid=False):
  u=Uc(UC_ARCH_X86,UC_MODE_64);pages=set();next_alloc=ARENA+0x10000;allocated=set();freed=set();calls=[]
@@ -27,7 +30,7 @@ def run(buyable,bought,selected=None,daily_replace=None,invalid=False):
   while bytes(u.mem_read(a,2))!=b'\0\0':b.extend(u.mem_read(a,2));a+=2
   return b.decode('utf-16le')
  mapat(BASE+plan['caveRva']);u.mem_write(BASE+plan['caveRva'],bytes.fromhex(plan['code']))
- mapat(USER);mapat(BASE+0xf8907e0);mapat(ARENA,0x100000)
+ mapat(USER);mapat(BASE+addr(0xf8907e0));mapat(ARENA,0x100000)
  u.mem_write(USER,bytes([0xa5])*0x200)
  vtable=ARENA+0x2000;notify=BASE+0x700000;w(USER,'Q',vtable);w(vtable+0x38,'Q',notify)
  putstr(USER+0x8c,buyable);putstr(USER+0x9c,bought)
@@ -36,13 +39,14 @@ def run(buyable,bought,selected=None,daily_replace=None,invalid=False):
  rsp=ARENA+0x8008;w(rsp,'Q',STOP);u.reg_write(UC_X86_REG_RSP,rsp)
  nv=[UC_X86_REG_RBX,UC_X86_REG_RSI,UC_X86_REG_RDI,UC_X86_REG_R12,UC_X86_REG_R13]
  for i,reg in enumerate(nv):u.reg_write(reg,0x123400+i)
- services=[0x134f050,0x1155960,0x1356b50,0x1bbe0,0x1bb10,0xdf5f0,0x700000]
+ services=[addr(a) for a in [0x134f050,0x1155960,0x1356b50,0x1bbe0,0x1bb10,0xdf5f0,0x700000]]
  for a in services:mapat(BASE+a)
  out_array=0;temporary=0
  def hook(m,address,size,_):
   nonlocal out_array,temporary
-  at=address-BASE
-  if at not in services:return
+  actual=address-BASE
+  if actual not in services:return
+  at=next((old for old,new in address_map.items() if new==actual),actual)
   assert m.reg_read(UC_X86_REG_RSP)%16==8,'Windows ABI alignment'
   c=m.reg_read(UC_X86_REG_RCX);d=m.reg_read(UC_X86_REG_RDX);calls.append(hex(at));ret=1
   if at==0x134f050:
