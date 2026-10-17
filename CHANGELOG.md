@@ -1,5 +1,14 @@
 # 변경 기록
 
+## 1.1.4-rc.1 — 2026-10-17 — 일반판 적용 판정·누락 복구
+
+- Fix false "already applied / 106 rows" reports when only an installation receipt remains and the live material catalog was removed or changed.
+- Validate actual DB integrity, catalog definitions and owned rows before skipping. Restore only missing recorded rows through a shared pre-change backup; preserve unrelated DB/shop edits.
+- Reject modified prices/quantities, reserved-ID conflicts and damaged/incompatible databases instead of overwriting them.
+- Replace raw result objects with clear Korean/English apply, repair and no-op messages; show the real `GAME/LID-Mod-State/backups` path and warn when old backup records are missing.
+- 108 automated tests passed; 14 separate real-file-copy integration checks passed, including Korean/English menu flows, exact backup restoration and preservation of guard/warp/M2G.
+- Standalone installer fix only. TFC edition, native/UPK patch bytes, saves and daily-restock logic are unchanged. New-build gameplay verification remains pending; prerelease ZIP.
+
 ## 1.1.2-rc.1 / TFC 1.2.0-rc.1 — 2026-10-04
 
 - Preserve reviewed independent UPK instruction edits and Nico file-check OFF entries; reject owned-byte/native conflicts before writes.

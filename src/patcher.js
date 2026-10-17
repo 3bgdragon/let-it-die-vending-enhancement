@@ -7,6 +7,7 @@ const {planMaterialCatalog}=require('./material-catalog');
 const {patchPackage,linkExecutable}=require('./decal-package');
 const {validatePackageLinks}=require('./executable-links');
 const shared=require('../shared/layers');
+const materialState=require('./material-state');
 const {text:t}=require('./language');
 const FILES=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
 const PACKAGE='BrgGame/CookedPCConsole/BrgGame.upk';
@@ -71,15 +72,37 @@ function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
 function apply(game,backupRoot,{decals=false,ammo=false}={}){
  if(ammo)decals=true;stopped();shared.adopt(game,process.env.LID_VENDING_BACKUP_DIR||backupRoot);
  const prior=shared.receipt(game),language=t('ko','en');
- if(prior&&prior.config.decals===decals&&prior.config.ammo===ammo&&prior.config.language===language){shared.basePair(game,prior);return {changed:false,rows:106,decals,ammo,backup:shared.stateRoot(game)};}
+ const dbfile=paths(game)[1];ensureDbClosed(dbfile);
+ let catalog;
+ if(prior){
+  shared.basePair(game,prior);
+  const before=sha(fs.readFileSync(dbfile)),db=new DatabaseSync(dbfile,{readOnly:true});
+  try{catalog=materialState.inspect(db,prior.config.rows);}finally{db.close();}
+  stopped();ensureDbClosed(dbfile);
+  if(sha(fs.readFileSync(dbfile))!==before)throw Error(t('검증 중 DB가 변경되었습니다. 다시 실행하세요.','Database changed during verification. Retry after closing other tools.'));
+ }
+ const same=prior&&prior.config.decals===decals&&prior.config.ammo===ammo&&prior.config.language===language;
+ const backupDirectory=path.join(shared.stateRoot(game),'backups');
+ if(same&&!catalog.missing.length)return {changed:false,rows:catalog.rows,decals,ammo,backup:null,backupDirectory,existingBackups:shared.backups(game,'vending').length,repairedMaterials:0};
+ if(same){
+  const tx=shared.transact(game,'vending',stage=>{
+   const db=new DatabaseSync(paths(stage)[1]);
+   try{return {result:materialState.repair(db,prior.config.rows)};}finally{db.close();}
+  });
+  return {changed:tx.changed,rows:tx.result.rows,decals,ammo,backup:tx.backup,backupDirectory,repairedMaterials:tx.result.repaired};
+ }
  const tx=shared.transact(game,'vending',stage=>{
-  if(prior)shared.removeMaterials(stage,prior.config);
+  if(prior){
+   const db=new DatabaseSync(paths(stage)[1]);
+   try{materialState.repair(db,prior.config.rows);}finally{db.close();}
+   shared.removeMaterials(stage,prior.config);
+  }
   const base=[fs.readFileSync(path.join(stage,FILES[0])),fs.readFileSync(path.join(stage,PACKAGE))];
   const result=applyRaw(stage,process.env.LID_SHARED_STAGE_BACKUP,{decals,ammo});
   const config={decals,ammo,language,rows:shared.materialRows(stage)};
   return {result,vending:{base,config}};
  });
- return {...tx.result,changed:tx.changed,backup:tx.backup};
+ return {...tx.result,changed:tx.changed,backup:tx.backup,backupDirectory,repairedMaterials:catalog?.missing.length||0};
 }
 function listBackups(root,game){
   const composed=shared.backups(game,'vending').map(folder=>({folder,manifest:JSON.parse(fs.readFileSync(path.join(folder,'manifest.json'),'utf8'))}));

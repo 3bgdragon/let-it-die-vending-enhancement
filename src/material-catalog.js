@@ -4,6 +4,9 @@ const defaultPrices = require('../material-prices.json');
 function planMaterialCatalog(db, prices = defaultPrices) {
   const existing = db.prepare('SELECT goods_id FROM master_automaticshop_lineup WHERE goods_id >= ? AND goods_id < ?').all(FIRST_ID, END_ID);
   if (existing.length) throw new Error('Reserved experimental goods IDs are already in use');
+  return expectedMaterialCatalog(db, prices);
+}
+function expectedMaterialCatalog(db, prices = defaultPrices) {
   const materials = db.prepare('SELECT itemid, rarity FROM master_item WHERE itemtype = ? ORDER BY itemid').all('ITTP_MATERIAL');
   if (!materials.length || materials.length > END_ID-FIRST_ID) throw new Error('Unexpected material count');
   const seen = new Set();
@@ -21,4 +24,4 @@ function planMaterialCatalog(db, prices = defaultPrices) {
       recycle_point_discount_rate:0, bloodnium_discount_rate:0};
   });
 }
-module.exports = {planMaterialCatalog};
+module.exports = {planMaterialCatalog,expectedMaterialCatalog};

@@ -10,6 +10,7 @@ const {inspectGame}=require('./src/inspect');
 const {apply,restore,listBackups,FILES}=require('./src/patcher');
 const {prepareBackups}=require('./src/backup-location');
 const shared=require('./shared/layers');
+const {format:formatApplyResult}=require('./src/apply-result');
 const {text:t,setLanguage,parseLanguage,savedLanguage,saveLanguage,errorText}=require('./src/language');
 function reportError(error){
   console.error(t('오류: ','Error: ')+errorText(error.message));
@@ -42,8 +43,8 @@ async function main(){
     for(;;){
       console.log(t('\nLET IT DIE 자판기 강화 — v','\nLET IT DIE Vending Machine Enhancement — v')+require('./package.json').version);
       console.log(t('설치 폴더: ','Game folder: ')+game);
-      console.log(t('백업 폴더 (삭제하지 마세요): ','Backup folder (do not delete): ')+root);
-      console.log(t('공통 모드 기록·백업 (삭제하지 마세요): ','Shared mod state/backups (do not delete): ')+shared.stateRoot(game));
+      console.log(t('구형 백업 폴더 (이전판용, 삭제하지 마세요): ','Legacy backup folder (older versions; do not delete): ')+root);
+      console.log(t('새 변경 전 백업 위치 (삭제하지 마세요): ','New pre-change backup location (do not delete): ')+path.join(shared.stateRoot(game),'backups'));
       console.log(t('재료 최초 입고 + 기존 일일 갱신 / 최대 7종 / 5개 묶음 / 희귀도별 가격','Initial material stock + existing daily refresh / up to 7 types / bundles of 5 / rarity-based prices'));
       console.log(t('첫 일반 요청에서 재료 이력이 없을 때 입고합니다. 재접속·재적용으로 품절을 초기화하지 않습니다.','Initial stock is added on a normal request if no material history exists. Reconnecting or reapplying does not reset sold-out stock.'));
       console.log(t('데칼 교체·탈착: 기존 버섯상점 관리·저장 처리 연결','Decal equip/remove: connects the existing mushroom-shop management and save flow'));
@@ -68,14 +69,14 @@ async function main(){
           }
         }catch(error){reportError(error);}continue;
       }
-      if(choice==='3'){const backups=listBackups(root,game);if(!backups.length)console.log(t('이 게임 설치 경로의 백업이 없습니다: ','No backups for this game folder: ')+root);for(const x of backups)console.log(x.manifest.status+' '+x.folder);continue;}
+      if(choice==='3'){const backups=listBackups(root,game);if(!backups.length)console.log(t('백업 기록이 없습니다. 확인한 위치:\n','No backup records found. Locations checked:\n')+path.join(shared.stateRoot(game),'backups')+'\n'+root);for(const x of backups)console.log(x.manifest.status+' '+x.folder);continue;}
       if(!['1','2','5','6'].includes(choice))continue;
       console.log(t('공통 관리에서는 다른 모드를 보존하며 자판기 설정을 변경합니다. 동일 설정 재적용은 생략합니다.','Shared management preserves other mods when changing vending settings. Identical settings are a no-op.'));
       console.log(t('공통 처리 외부의 변경은 덮어쓰지 않습니다. 전체 백업 복원은 이후 변경이 있으면 차단합니다.','Changes outside shared management are not overwritten. Full restore refuses later changes.'));
       console.log(t('세이브를 별도 백업하세요. 파일 복원은 구매·데칼·충전 결과를 되돌리지 않습니다.','Back up your save separately. File restore does not undo purchases, decal changes or ammo refills.'));
       if(!/^y$/i.test((await rl.question(t('게임 종료 후 진행하세요. 동의합니까? (y/N): ','Close the game completely. Proceed? (y/N): '))).trim()))continue;
       console.log(t('파일 검증·공통 합성 처리 중입니다. 창을 닫지 마세요.','Verifying and composing files. Do not close this window.'));
-      try{console.log(choice!=='2'?apply(game,root,{decals:['1','6'].includes(choice),ammo:choice==='1'}):t('복원 완료: ','Restored: ')+restore(game,root));}
+      try{console.log(choice!=='2'?formatApplyResult(apply(game,root,{decals:['1','6'].includes(choice),ammo:choice==='1'})):t('복원 완료: ','Restored: ')+restore(game,root));}
       catch(error){reportError(error);}
     }
   }finally{rl.close();}

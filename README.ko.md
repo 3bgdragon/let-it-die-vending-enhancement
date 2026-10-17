@@ -1,12 +1,27 @@
-# LET IT DIE 자판기 강화 모드 — v1.1.3-rc.1
+# LET IT DIE 자판기 강화 모드 — v1.1.4-rc.1
 
 > Steam build 25767944 RC: [validation and limitations](BUILD-25767944-VALIDATION.md). File/engine tests completed; new-build live gameplay pending. / 새 빌드 파일·처리 엔진 검증 완료, 실게임 검증 전.
 
-호환성 프리릴리스 **1.1.3-rc.1** / Steam 빌드 25386710.
+호환성 프리릴리스 **1.1.4-rc.1** / Steam 빌드 25386710·25767944.
 Nico·TFC의 실제 처리 엔진과 파일 복사본으로 검증했습니다. 이번 변경의 GUI·실게임 재검증은 미완료입니다.
 기존판과 TFC판은 별도 ZIP이며 혼용하지 마세요. [검증 범위와 한계](COMPATIBILITY-VALIDATION.md).
 
-TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.0-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
+TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.1-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
+
+## 이번 일반판 수정 — 적용 판정·누락 복구·백업 안내
+
+기존 설치 기록만 남고 실제 DB가 원본으로 돌아갔을 때도 적용됐다고 판단하던 문제를 수정했습니다.
+실제 DB·EXE·UPK를 검사하고, 누락된 재료 상품은 자동 백업 후 누락분만 복구합니다.
+다른 상품과 DB 변경은 유지하며 가격·수량 변조, 예약 ID 충돌과 DB 손상은 덮어쓰지 않고 중단합니다.
+
+새 백업은 **게임 폴더의 `LID-Mod-State\backups`**에 저장됩니다.
+정상적인 동일 설정 재적용은 새 백업을 만들지 않으며 이유와 기존 백업 위치를 표시합니다.
+이미 삭제된 원본 백업을 새로 복구했다고 안내하지 않습니다.
+
+자동 테스트 108개와 실제 게임 파일 복사본의 통합 테스트 14개를 통과했습니다.
+한국어·영어 메뉴, 백업 복원과 가드·워프·M2G 동시 적용 보존을 확인했습니다.
+이번 변경은 일반판 설치 도구 수정이며 TFC판, 게임 패치 바이트, 세이브와 일일 갱신 로직은 변경하지 않았습니다.
+새 빌드의 실게임 구매·재입고·저장 유지 검증 완료를 의미하지는 않습니다.
 
 ## UPK 편집기 호환 배치 — 시험 기능
 

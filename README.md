@@ -4,7 +4,9 @@
 
 TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.1-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
 
-Compatibility candidate **1.1.3-rc.1**: [rules and test evidence](COMPATIBILITY-VALIDATION.md).
+Standalone candidate **1.1.4-rc.1**: validates the actual material catalog before
+skipping reapplication, repairs missing owned rows with a backup, and clearly
+reports the real shared backup location. [Rules and test evidence](COMPATIBILITY-VALIDATION.md).
 
 Compatibility candidate, 2026-10-04; reviewed Steam build 25386710. Actual Nico DB Mod Manager 0.10.1 and TFC Installer 2.5.6.0 engines were tested separately from S3er0i9ng Mod Manager 1.3.20. File-copy tests passed; this update has NOT been retested through the GUI or in live gameplay. Unknown/conflicting layouts remain blocked. External managers can still overwrite files from cached originals; detected preset loss requires selected-feature reinstallation, not an old whole-file restore.
 
@@ -111,6 +113,31 @@ The selected language controls the installer and newly applied in-game decal/amm
 Legacy backups use the visible sibling folder `let-it-die-vending-enhancement-backups`; new shared snapshots use the game's `LID-Mod-State/backups`.
 Keep it when replacing the tool. Existing internal backups are verified and copied on startup;
 do this before deleting the old tool folder. Already-deleted backups cannot be recovered automatically.
+
+### Standalone catalog verification and repair
+
+Reapplying now verifies the actual master DB as well as the EXE/UPK layer; an old
+installation receipt alone is not proof that the material shop is installed.
+If an update or manager removed some or all recorded material rows, reapplying
+repairs only the missing rows with an automatic shared pre-change backup. Other
+shop entries and unrelated DB changes are preserved. Modified prices, quantities,
+reserved-ID conflicts, incompatible material definitions or a damaged DB stop
+instead of being silently overwritten. A normal identical reapplication creates
+no new backup and clearly says so. The displayed backup location is the actual
+shared `LID-Mod-State/backups` folder, not the legacy tool-relative folder.
+
+일반판 재적용은 설치 기록만 믿지 않고 실제 DB·EXE·UPK를 검사합니다. 재료 상품이
+누락됐다면 변경 전 공통 백업을 만든 뒤 누락분만 복구합니다. 다른 상품과 DB 변경은
+유지하며, 가격·수량 변조나 상품 ID 충돌은 덮어쓰지 않고 중단합니다. 정상적인 동일
+설정 재적용은 파일과 새 백업을 만들지 않으며 그 이유와 실제 백업 경로를 표시합니다.
+
+Regression coverage: `tests/material-state.test.js` and `tests/apply-result.test.js`
+run without game files. The optional `tests/material-repair-integration.test.js`
+uses `LID_VENDING_GAME_FIXTURE` pointing to an unmodified supported game copy;
+it creates independent temporary copies and never patches the supplied fixture.
+This covers fresh-process reapplication, missing-row repair, conflicts, exact
+pre-repair backup restoration, and the actual Korean/English menu flow. These
+are installer/file tests, not a new claim of in-game daily-restock verification.
 
 ## Important behavior
 
