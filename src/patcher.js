@@ -97,8 +97,21 @@ function apply(game,backupRoot,{decals=false,ammo=false}={}){
    try{materialState.repair(db,prior.config.rows);}finally{db.close();}
    shared.removeMaterials(stage,prior.config);
   }
+  // Work only inside the transaction's private image. A complete exact-byte
+  // match proves these are our old bridge fragments, not a foreign mod. The
+  // shared backup captures the REAL pre-operation partial image; the removable
+  // baseline records only the normalized owned UI, never a guessed full UPK.
+  let recoveredUiFunctions=0;
+  if(decals&&(!prior||!prior.config.decals)){
+   const file=path.join(stage,PACKAGE),beforeUi=fs.readFileSync(file),ui=require('./ui-recovery').plan(beforeUi);
+   if(ui.functions){
+    const exeFile=path.join(stage,FILES[0]),beforeExe=fs.readFileSync(exeFile);
+    replace(file,ui.output);replace(exeFile,linkExecutable(beforeExe,beforeUi,ui.output));
+    recoveredUiFunctions=ui.functions;
+   }
+  }
   const base=[fs.readFileSync(path.join(stage,FILES[0])),fs.readFileSync(path.join(stage,PACKAGE))];
-  const result=applyRaw(stage,process.env.LID_SHARED_STAGE_BACKUP,{decals,ammo});
+  const result={...applyRaw(stage,process.env.LID_SHARED_STAGE_BACKUP,{decals,ammo}),recoveredUiFunctions};
   const config={decals,ammo,language,rows:shared.materialRows(stage)};
   return {result,vending:{base,config}};
  });

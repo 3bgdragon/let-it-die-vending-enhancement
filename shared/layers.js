@@ -132,10 +132,16 @@ function basePair(game,r,allowedMod=null){
   if(base[1].length<0x25||base[1].readUInt32LE(0x21)!==173671)fail('Shared files changed outside composition; scoped layout unavailable');
   for(const mod of new Set(owned.catalog.objects.filter(p=>p.file===file).map(p=>p.mod))){
    const old=owned.objects(expected[1],mod,file).rows,now=owned.objects(current[1],mod,file).rows;
-   for(const row of old)if(mod!==allowedMod&&(row.state===null||now.find(n=>n.index===row.index)?.state!==row.state))fail('Shared files changed outside composition: feature lost/conflicted / 기능 유실·충돌: '+mod+'/'+row.index);
+   for(const row of old)if(mod!==allowedMod){
+    const currentRow=now.find(n=>n.index===row.index);
+    // A materials-only receipt never owns a vending UI bridge. Preserve its
+    // exact unknown body; do not mistake an unchanged foreign UI for damage.
+    const untouchedForeign=mod==='vending'&&!r.config.decals&&currentRow&&row.bytes.equals(currentRow.bytes);
+    if(!untouchedForeign&&(row.state===null||currentRow?.state!==row.state))fail('Shared files changed outside composition: feature lost/conflicted / 기능 유실·충돌: '+mod+'/'+row.index);
+   }
   }
-  if(owned.inspect(base[1],'vending',file)!=='off')fail('Vending baseline is not a removable owned layer');
-  const underlying=owned.set(current[1],'vending',file,'off'),linked=require('./kernel/src/executable-links'),nativeBase=Buffer.from(base[0]),masked=new Set();
+  if(r.config.decals&&owned.inspect(base[1],'vending',file)!=='off')fail('Vending baseline is not a removable owned layer');
+  const underlying=r.config.decals?owned.set(current[1],'vending',file,'off'):current[1],linked=require('./kernel/src/executable-links'),nativeBase=Buffer.from(base[0]),masked=new Set();
   if(current[0].length!==expected[0].length)fail('External EXE size/section change; nothing overwritten');
   for(const [name,[,count]] of Object.entries(linked.PACKAGES))for(const at of linked.digestOffsets(expected[0],name,count))for(let j=0;j<20;j++)masked.add(at+j);
   for(let i=0;i<current[0].length;i++)if(current[0][i]!==expected[0][i]&&!masked.has(i)){
@@ -146,7 +152,9 @@ function basePair(game,r,allowedMod=null){
    for(const at of linked.digestOffsets(nativeBase,name,count))digest.copy(nativeBase,at);
   }
   const rebased=[nativeBase,underlying],output=compose(rebased,r.config);
-  owned.verifyTransition(current[1],output[1],'vending',file);owned.verifyOthers(current[1],output[1],'vending',file);
+  if(r.config.decals)owned.verifyTransition(current[1],output[1],'vending',file);
+  else if(!current[1].equals(output[1]))fail('Materials-only rebase changed UI bytes');
+  owned.verifyOthers(current[1],output[1],'vending',file);
   if(!linked.normalizedExecutable(output[0]).equals(linked.normalizedExecutable(current[0])))fail('Scoped vending native rebase proof failed');
   linked.validatePackageLinks(current[0],game);return rebased;
  }
@@ -252,7 +260,8 @@ function transact(game,kind,fn,{checkRunning=running,compact=false,acceptLostMod
   if(before[1].length>0x25&&before[1].readUInt32LE(0x21)===173671){
    const owned=require('./owned-functions');
    for(const [index,file] of [[1,'BrgGame.upk'],[2,'AS_CH_Main_Male_Common_SF.upk']]){
-    if(owned.catalog.objects.some(p=>p.mod===kind&&p.file===file))owned.verifyTransition(before[index],after[index],kind,file);
+    const untouchedMaterialUi=kind==='vending'&&Object.hasOwn(action,'vending')&&(!action.vending||!action.vending.config.decals)&&(!previous||!previous.config.decals)&&before[index].equals(after[index]);
+    if(!untouchedMaterialUi&&owned.catalog.objects.some(p=>p.mod===kind&&p.file===file))owned.verifyTransition(before[index],after[index],kind,file);
     owned.verifyOthers(before[index],after[index],kind,file);
    }
   }

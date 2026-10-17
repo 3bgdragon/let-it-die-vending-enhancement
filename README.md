@@ -14,9 +14,30 @@ No gameplay settings or DB recipes were changed by this fix.
 
 TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.2-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
 
-Standalone candidate **1.1.5-rc.1**: validates the actual material catalog before
+Standalone candidate **1.1.6-rc.1**: validates the actual material catalog before
 skipping reapplication, repairs missing owned rows with a backup, and clearly
 reports the real shared backup location. [Rules and test evidence](COMPATIBILITY-VALIDATION.md).
+
+### Standalone UI-conflict recovery and diagnostics
+
+When every vending UI function is an exact reviewed stock/bridge body, old
+unmanaged bridge fragments can be rebuilt for the requested preset. The real
+pre-operation image is backed up; unknown UI bytes are NOT overwritten or
+silently replaced with stock. Loss of a bridge owned by an existing receipt
+still stops instead of being auto-repaired. This is not a generic bytecode merger.
+
+Option 5 installs materials only and preserves an unknown vending UI exactly;
+it does not enable decals/ammo. All-feature failure never silently falls back.
+UI errors show actual/expected sizes and SHA-256 and automatically save a
+`logs/diagnostic-*.json` with bounded UI bytecode, requested features, selected
+game folder, tool location and installed-state evidence. No saves, DB rows,
+credentials or full game binaries are included. Paths are included; review
+them before sharing. Read-only collection: `node tool.js diagnose --game "GAME"`.
+
+The reporter's actual package is still unavailable. Supported recovery tests
+are controlled fixtures, not confirmation that their particular case is fixed.
+This standalone change does not update the separate TFC runtime or other mods.
+[Recovery rules and test evidence](UI-RECOVERY-VALIDATION.md).
 
 Compatibility candidate, 2026-10-04; reviewed Steam build 25386710. Actual Nico DB Mod Manager 0.10.1 and TFC Installer 2.5.6.0 engines were tested separately from S3er0i9ng Mod Manager 1.3.20. File-copy tests passed; this update has NOT been retested through the GUI or in live gameplay. Unknown/conflicting layouts remain blocked. External managers can still overwrite files from cached originals; detected preset loss requires selected-feature reinstallation, not an old whole-file restore.
 

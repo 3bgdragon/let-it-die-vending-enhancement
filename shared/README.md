@@ -1,5 +1,10 @@
 # Shared composition protocol — development preview
 
+This vending 1.1.6 standalone copy contains a vending-specific material-only
+UI-preservation fix. Other mod releases may retain their earlier bundled code;
+the receipt format is unchanged. Do not replace another tool's shared folder
+with this one. See [recovery scope](../UI-RECOVERY-VALIDATION.md).
+
 This identical bundle ships in the warp, Just Guard, M2G and vending tools.
 No other checkout or Python is needed at runtime. The vending recipe currently
 targets Steam build 25386710; unknown code is not automatically authorized.

@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 1.1.6-rc.1 — standalone UI recovery and diagnostics
+
+- Rebuild only exact reviewed unmanaged stock/bridge combinations for the requested vending preset; back up the real pre-operation image and retain M2G/other functions.
+- Preserve unknown UI bodies during explicitly selected material-only installation, reapplication, external rebasing and selective removal. Never silently downgrade an all-feature request.
+- Keep unknown UI merges and loss of a recorded owned bridge blocked. No arbitrary bytecode relocation or vanilla overwrite.
+- Show actual/expected function sizes and SHA-256 and save bounded shareable UI diagnostic JSON with separate failed-stage/current-install evidence. Add a read-only diagnose command.
+- This update is limited to the vending standalone tool. The separate TFC distribution and other mod repositories are unchanged. Reporter-file/gameplay confirmation remains pending.
+
 ## 1.1.5-rc.1 / TFC 1.2.2-rc.1 — 2026-10-17
 
 - Preserve eligible foreign OFF-layout SkillExchange.Tick UI bytes, avoiding false vending/91836 conflicts when preparing another mod.

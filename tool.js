@@ -12,22 +12,33 @@ const {prepareBackups}=require('./src/backup-location');
 const shared=require('./shared/layers');
 const {format:formatApplyResult}=require('./src/apply-result');
 const {text:t,setLanguage,parseLanguage,savedLanguage,saveLanguage,errorText}=require('./src/language');
-function reportError(error){
+function reportError(error,context={}){
   console.error(t('오류: ','Error: ')+errorText(error.message));
   try{
     const logs=path.join(__dirname,'logs');fs.mkdirSync(logs,{recursive:true});
-    const file=path.join(logs,'error-'+new Date().toISOString().replace(/[:.]/g,'-')+'.log');
-    fs.writeFileSync(file,`Version: ${require('./package.json').version}\nNode: ${process.version}\n${error.stack||error}\n`);
+    const id=new Date().toISOString().replace(/[:.]/g,'-')+'-'+require('node:crypto').randomUUID().slice(0,8);
+    const file=path.join(logs,'error-'+id+'.log');
+    fs.writeFileSync(file,`Version: ${require('./package.json').version}\nNode: ${process.version}\n${error.stack||error}\n`,{flag:'wx'});
     console.error(t('오류 로그: ','Error log: ')+file);
+    if(context.game||error.code==='LID_VENDING_UI_CONFLICT'){
+      const diagnostics=require('./src/ui-diagnostics');
+      const json=diagnostics.save(logs,diagnostics.collect(context.game,{tool:__dirname,features:context.features,error}),id);
+      console.error(t('공유용 UI 진단 JSON: ','Shareable UI diagnostic JSON: ')+json);
+      if(error.code==='LID_VENDING_UI_CONFLICT')console.error(t('UI 충돌로 전체 기능 적용을 중단했습니다. 재료만 필요하면 5번을 선택하세요. 데칼·탄약이 적용됐다는 뜻은 아닙니다.','All-feature installation stopped on a UI conflict. Option 5 applies materials only; this does NOT mean decals or ammo are enabled.'));
+    }
   }catch{console.error(t('오류 로그를 저장하지 못했습니다. 위 오류 내용을 복사해 주세요.','Could not save the error log. Copy the error shown above.'));}
 }
 async function main(){
   const parsed=parseLanguage(process.argv.slice(2)),args=parsed.args;
   setLanguage(parsed.language||savedLanguage(__dirname)||'ko');
+  if(args.length===3&&args[0]==='diagnose'&&args[1]==='--game'){
+    const diagnostics=require('./src/ui-diagnostics');
+    console.log(diagnostics.save(path.join(__dirname,'logs'),diagnostics.collect(args[2])));return;
+  }
   if(args.length===3&&args[0]==='inspect'&&args[1]==='--game'){
     console.log(JSON.stringify(inspectGame(args[2]),null,2));return;
   }
-  if(args.length&&!(args.length===2&&args[0]==='--game'))throw new Error('Usage: node tool.js [--game "game folder"] [--lang ko|en]');
+  if(args.length&&!(args.length===2&&args[0]==='--game'))throw new Error('Usage: node tool.js [diagnose --game "game folder" | --game "game folder"] [--lang ko|en]');
   const rl=readline.createInterface({input:process.stdin,output:process.stdout});
   try{
     if(parsed.language)saveLanguage(__dirname,parsed.language);
@@ -69,15 +80,16 @@ async function main(){
           }
         }catch(error){reportError(error);}continue;
       }
-      if(choice==='3'){const backups=listBackups(root,game);if(!backups.length)console.log(t('백업 기록이 없습니다. 확인한 위치:\n','No backup records found. Locations checked:\n')+path.join(shared.stateRoot(game),'backups')+'\n'+root);for(const x of backups)console.log(x.manifest.status+' '+x.folder);continue;}
+      if(choice==='3'){const backups=listBackups(root,game);if(!backups.length)console.log(t('백업 기록이 없습니다. UI 검증 등 준비 단계에서 실패하면 게임 파일은 설치하지 않으며 새 백업도 생성하지 않습니다. 확인한 위치:\n','No backup records found. A failure during UI preflight does not install game files or create a new backup. Locations checked:\n')+path.join(shared.stateRoot(game),'backups')+'\n'+root);for(const x of backups)console.log(x.manifest.status+' '+x.folder);continue;}
       if(!['1','2','5','6'].includes(choice))continue;
       console.log(t('공통 관리에서는 다른 모드를 보존하며 자판기 설정을 변경합니다. 동일 설정 재적용은 생략합니다.','Shared management preserves other mods when changing vending settings. Identical settings are a no-op.'));
       console.log(t('공통 처리 외부의 변경은 덮어쓰지 않습니다. 전체 백업 복원은 이후 변경이 있으면 차단합니다.','Changes outside shared management are not overwritten. Full restore refuses later changes.'));
+      if(['1','6'].includes(choice))console.log(t('검증된 기존 자판기 UI 조각은 백업 후 선택한 구성으로 재구성합니다. 알 수 없는 데칼 함수는 덮어쓰지 않습니다.','Exact reviewed old vending UI fragments are backed up and rebuilt for the selected preset. Unknown decal functions are not overwritten.'));
       console.log(t('세이브를 별도 백업하세요. 파일 복원은 구매·데칼·충전 결과를 되돌리지 않습니다.','Back up your save separately. File restore does not undo purchases, decal changes or ammo refills.'));
       if(!/^y$/i.test((await rl.question(t('게임 종료 후 진행하세요. 동의합니까? (y/N): ','Close the game completely. Proceed? (y/N): '))).trim()))continue;
       console.log(t('파일 검증·공통 합성 처리 중입니다. 창을 닫지 마세요.','Verifying and composing files. Do not close this window.'));
       try{console.log(choice!=='2'?formatApplyResult(apply(game,root,{decals:['1','6'].includes(choice),ammo:choice==='1'})):t('복원 완료: ','Restored: ')+restore(game,root));}
-      catch(error){reportError(error);}
+      catch(error){reportError(error,{game,features:{decals:['1','6'].includes(choice),ammo:choice==='1'}});}
     }
   }finally{rl.close();}
 }
