@@ -1,12 +1,21 @@
-# LET IT DIE 자판기 강화 모드 — v1.1.4-rc.1
+# LET IT DIE 자판기 강화 모드 — v1.1.5-rc.1
 
 > Steam build 25767944 RC: [validation and limitations](BUILD-25767944-VALIDATION.md). File/engine tests completed; new-build live gameplay pending. / 새 빌드 파일·처리 엔진 검증 완료, 실게임 검증 전.
 
-호환성 프리릴리스 **1.1.4-rc.1** / Steam 빌드 25386710·25767944.
+
+## 2026-10-17 호환성 수정: vending/91836
+
+자판기 미설치 구간의 검증 가능한 독립 UI 변경을 보존하도록 수정했습니다.
+실제 소유 명령어 충돌·부분 적용·설치된 패치 손상·안전하게 병합할 수 없는
+길이 변경은 계속 차단합니다. TFC판은 이 버전에서 준비 폴더를 새로 만드세요.
+이전 준비 패키지를 재사용하면 이전 검증 코드가 실행됩니다.
+[수정 범위와 검증](FOREIGN-UI-VALIDATION.md). 게임 기능 설정·DB 구성은 변경하지 않았습니다.
+
+호환성 프리릴리스 **1.1.5-rc.1** / Steam 빌드 25386710·25767944.
 Nico·TFC의 실제 처리 엔진과 파일 복사본으로 검증했습니다. 이번 변경의 GUI·실게임 재검증은 미완료입니다.
 기존판과 TFC판은 별도 ZIP이며 혼용하지 마세요. [검증 범위와 한계](COMPATIBILITY-VALIDATION.md).
 
-TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.1-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
+TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.2-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
 
 ## 이번 일반판 수정 — 적용 판정·누락 복구·백업 안내
 
