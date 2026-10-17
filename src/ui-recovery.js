@@ -5,9 +5,9 @@ const owned=require('../shared/owned-functions');
 function plan(source,{scopePreset=null}={}){
  const rows=owned.objects(source,'vending','BrgGame.upk').rows;
  const selected=scopePreset?rows.filter(row=>owned.owns(row.variants,scopePreset)):rows;
- const exact=row=>row.bytes.equals(row.variants[0].off)||row.variants.some(p=>row.bytes.equals(p.on));
+ const exact=row=>owned.reviewed(row.bytes,row.variants);
  if(!selected.every(exact))return {output:source,functions:0,unknown:true};
- const applied=selected.filter(row=>!row.bytes.equals(row.variants[0].off));
+ const applied=selected.filter(row=>!owned.merge(row.bytes,row.variants,'off').equals(row.bytes));
  if(!applied.length)return {output:source,functions:0,unknown:false};
  const output=owned.set(source,'vending','BrgGame.upk','off',scopePreset?{scopePreset}:{});
  owned.verifyOthers(source,output,'vending','BrgGame.upk');

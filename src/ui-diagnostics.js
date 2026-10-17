@@ -8,6 +8,10 @@ function classify(bytes,index){
  const v=owned.group('vending','BrgGame.upk',index),digest=sha(bytes);
  if(!v)return {state:'unreviewed'};
  if(v[0].offHash===digest&&bytes.length===v[0].off.length)return {state:'reviewed-stock'};
+ if(index===91836){
+  const compat=require('./tick-compat'),state=compat.identify(bytes,v[0].off);
+  if(state!==null)return {state:state==='off'?'reviewed-compatible-base':'reviewed-vending-bridge',compatibility:'SkillExchange.Tick/66b852e2',baseFunctionSha256:compat.evidence.foreignSha256};
+ }
  const presets=v.filter(p=>p.onHash===digest&&p.on.length===bytes.length).map(p=>p.preset);
  if(presets.length)return {state:'reviewed-vending-bridge',presets};
  return {state:'unknown-modified',recognition:owned.recognize(bytes,v)};

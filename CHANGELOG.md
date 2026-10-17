@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 1.1.8-rc.1 — exact reported Tick composition (2026-10-18)
+
+- Analyze the actual diagnostic function SHA-256 `66b852e2…` and reconstruct its exact 11,582-byte OFF image from reviewed stock plus a compact delta.
+- Compose the existing full decal/ammo bridge by relocating 313 audited branch operands; preserve every other external instruction. Removal restores the external OFF image, not vanilla.
+- Recognize only this exact OFF/ON family in ownership and partial-bridge recovery; keep nearby unknown edits and damaged installed code blocked.
+- Record this compatibility family distinctly in diagnostic JSON. TFC and other repositories are unchanged; full reporter-environment/gameplay verification remains pending.
+
 ## 1.1.7-rc.1 — independent ammo UI (2026-10-18)
 
 - Add explicit standalone option 10 for materials + ammo, without any decal-management function patches or a decal entry. Keep the full-feature action explicit; never silently downgrade it.

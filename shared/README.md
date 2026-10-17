@@ -91,3 +91,13 @@ Shared receipts can now express ammo=true/decals=false. Older sibling tools may
 refuse that configuration safely; do not copy this shared folder into them or
 delete receipts to bypass the refusal. Remove the vending layer using this
 updated checkout before operating an incompatible older installer.
+
+## Reviewed external Tick family (1.1.8-rc.1)
+
+The exact diagnostic family `66b852e2…` is reconstructed from stock plus a
+reviewed delta. Its OFF state is the external function, not vanilla. The ON
+state inserts only the vending bridge and relocates 313 audited branch words.
+Nearby unreviewed edits remain conflicts. Both ownership and recovery preserve
+this baseline, including partial ON normalization and selective removal.
+This support is local to vending; older sibling runtimes may safely refuse a
+recipe they do not understand. The separate TFC runtime is unchanged.

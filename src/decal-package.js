@@ -19,6 +19,7 @@ function uiConflict(original,p,reason,declaredSize=original.length){
  return error;
 }
 function patchFunction(original,p){
+ p=require('./tick-compat').resolve(original,p);
  if(original.length!==p.size)throw uiConflict(original,p,'function-size-mismatch');
  if(sha(original)!==p.before)throw uiConflict(original,p,'function-hash-mismatch');
  const size=original.readUInt32LE(0x2c),memory=original.readUInt32LE(0x28);
@@ -39,7 +40,6 @@ function patchPackage(source,selectedPlan=plan){
   if(wanted.has(i)){
    const p=wanted.get(i),size=entry.readUInt32LE(32),offset=entry.readUInt32LE(36);
    if(size>1024*1024)throw uiConflict(r.read(offset,Math.min(size,0x30)),p,'function-exceeds-diagnostic-limit',size);
-   if(size!==p.size)throw uiConflict(r.read(offset,size),p,'function-size-mismatch');
    patches.push({p,slot:at,replacement:patchFunction(r.read(offset,size),p)});
   }at+=68+generations*4;
  }

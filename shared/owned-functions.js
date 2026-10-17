@@ -59,6 +59,7 @@ function foreignOffCompatible(bytes,variants){
  return windows.every(([a,b])=>bytes.subarray(a,b).equals(stock.subarray(a,b)));
 }
 function recognize(bytes,variants){
+ if(isTick(variants)){const state=require('./kernel/src/tick-compat').identify(bytes,variants[0].off);if(state!==null)return state;}
  const c=context(variants),matches=b=>bytes.length===b.length&&(c?bytes.subarray(0,48).equals(b.subarray(0,48))&&c.windows.every(([a,z])=>bytes.subarray(a,z).equals(b.subarray(a,z))):bytes.equals(b));
  if(matches(variants[0].off))return 'off';
  for(const p of variants)if(matches(p.on))return p.preset;
@@ -68,6 +69,7 @@ function recognize(bytes,variants){
 function merge(bytes,variants,preset){
  const target=preset==='off'?variants[0].off:(variants.find(p=>p.preset===preset)?.on||variants[0].off);
  if(/^ammo-(ko|en)$/.test(preset)&&!owns(variants,preset))return Buffer.from(bytes);
+ if(isTick(variants)){const reviewed=require('./kernel/src/tick-compat').merge(bytes,variants[0].off,preset);if(reviewed)return reviewed;}
  if(recognize(bytes,variants)===null)throw Error(`Owned instruction conflict: ${variants[0].mod} ${variants[0].file} export ${variants[0].index}; no files changed / 소유 명령어 충돌`);
  const c=context(variants);
  if(!c){
@@ -112,6 +114,8 @@ function owns(variants,preset){
  const p=variants.find(p=>p.preset===preset);if(!p)throw Error('Unknown scoped ownership preset: '+preset);
  return !p.on.equals(p.off);
 }
+function isTick(v){return v[0].mod==='vending'&&v[0].file==='BrgGame.upk'&&v[0].index===91836;}
+function reviewed(bytes,variants){return bytes.equals(variants[0].off)||variants.some(p=>bytes.equals(p.on))||(isTick(variants)&&require('./kernel/src/tick-compat').identify(bytes,variants[0].off)!==null);}
 function set(source,mod,file,preset,{scopePreset=null}={}){
  if(!['off',...new Set(catalog.objects.filter(p=>p.mod===mod&&p.file===file).map(p=>p.preset))].includes(preset))throw Error('Unknown owned preset');
  if(scopePreset!==null&&!/^ammo-(ko|en)$/.test(scopePreset))throw Error('Invalid selective UI scope');
@@ -164,4 +168,4 @@ function verifyOthers(before,after,mod,file){
  }
  return true;
 }
-module.exports={inspect,set,objects,merge,recognize,group,verifyTransition,verifyOthers,owns,sha,catalog};
+module.exports={inspect,set,objects,merge,recognize,group,verifyTransition,verifyOthers,owns,reviewed,sha,catalog};

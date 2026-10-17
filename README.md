@@ -1,6 +1,24 @@
 # LET IT DIE Vending Machine Enhancement
 
-## Independent ammo UI — v1.1.7-rc.1 standalone RC
+## Reviewed reported Tick compatibility — v1.1.8-rc.1
+
+Option 1 can now compose the exact reported SkillExchange.Tick function
+(`66b852e2…`, 11,582 bytes) with the existing decal/ammo bridge. A reviewed delta
+reconstructs that input; the installer preserves the external code and relocates
+its 313 absolute branches for the additional vending bridge. Removing vending
+restores that external function, **not the vanilla function**. Any unreviewed
+variation or damaged installed bridge still stops. This is not a generic merger.
+
+The actual diagnostic function is now available, replacing the earlier same-size
+fixture limitation for this one function family. The full reporter package,
+EXE/DB and in-game behavior are still not supplied/verified. Previously installed
+M2G/independent edits are preserved in file-copy tests; older sibling tools may
+still refuse a baseline their bundled recipes do not understand. Keep receipts
+and backups and use this updated vending tool for removal. TFC is unchanged.
+
+See [reported-function evidence and validation](REPORTED-TICK-VALIDATION.md).
+
+## Previous: independent ammo UI — v1.1.7-rc.1 standalone RC
 
 Option **10, materials + ammo**, adds no decal-management entry and patches only
 six reviewed vending/shop functions. All three SkillExchange functions, including
@@ -8,8 +26,8 @@ Tick, and the unused vending Tick/Render remain byte-exact. Required ammo-functi
 conflicts still stop installation. Option 1 never silently falls back to this mode.
 Pricing, safe-money payment and the existing save flow are unchanged.
 
-The reporter's actual 11,582-byte function is unavailable. Controlled same-size
-preservation tests are not certification of their file or full decal compatibility.
+At the time of 1.1.7 the reporter's actual 11,582-byte function was unavailable.
+Its controlled same-size preservation tests did not certify that function.
 TFC is unchanged. Older standalone tools may safely refuse settings changes while
 this new configuration is active; selectively remove this layer using option 2 of
 the updated vending tool first. Never delete shared state or backups to bypass it.
