@@ -24,7 +24,7 @@ function reportError(error,context={}){
       const diagnostics=require('./src/ui-diagnostics');
       const json=diagnostics.save(logs,diagnostics.collect(context.game,{tool:__dirname,features:context.features,error}),id);
       console.error(t('공유용 UI 진단 JSON: ','Shareable UI diagnostic JSON: ')+json);
-      if(error.code==='LID_VENDING_UI_CONFLICT')console.error(t('UI 충돌로 전체 기능 적용을 중단했습니다. 재료만 필요하면 5번을 선택하세요. 데칼·탄약이 적용됐다는 뜻은 아닙니다.','All-feature installation stopped on a UI conflict. Option 5 applies materials only; this does NOT mean decals or ammo are enabled.'));
+      if(error.code==='LID_VENDING_UI_CONFLICT')console.error(t('전체 적용은 중단했습니다. 10번 재료+탄약은 데칼 관리 함수를 변경하지 않습니다. 탄약에 필요한 함수도 충돌하면 중단합니다. 재료만 필요하면 5번입니다.','Full installation stopped. Option 10 adds materials + ammo without changing decal-management functions; conflicts in required ammo functions still stop. Option 5 is materials only.'));
     }
   }catch{console.error(t('오류 로그를 저장하지 못했습니다. 위 오류 내용을 복사해 주세요.','Could not save the error log. Copy the error shown above.'));}
 }
@@ -63,6 +63,7 @@ async function main(){
       console.log(t('재료 입고·구매 / 탄약 충전: 사용자 확인. 날짜 변경·재접속 저장 유지는 별도 검증 필요.','Material stock/purchases and ammo refills: user confirmed. Day-change restocking and persistence after restart still need verification.'));
       console.log(t('EXE + MASTER DB + BrgGame.upk 변경. 세이브는 직접 수정하지 않습니다.','Modifies EXE + master DB + BrgGame.upk. Does not directly edit saves.'));
       console.log(t('1. 전체 적용 (자동 백업)\n2. 자판기만 제거 (공통 관리 전 구형 설치는 백업 복원)\n3. 백업 목록\n4. 종료\n5. 재료 상점만\n6. 재료 + 데칼 (탄약 제외)\n7. 언어 변경 / Language\n8. 기존 설치를 공통 모드 관리에 등록\n9. 최신 공통 전체 백업 복원','1. Apply all features (automatic backup)\n2. Remove vending only (legacy unmanaged installs use backup restore)\n3. List backups\n4. Exit\n5. Materials only\n6. Materials + decals (no ammo)\n7. Language / 언어 변경\n8. Register existing installation for shared mod management\n9. Restore latest shared full backup'));
+      console.log(t('10. 재료 + 탄약 (데칼 관리 함수 변경 안 함)','10. Materials + ammo (leave decal-management functions unchanged)'));
       const choice=(await rl.question(t('선택: ','Select: '))).trim();
       if(choice==='4'||choice==='')break;
       if(choice==='7'){const lang=(await rl.question('1. 한국어  2. English: ')).trim();if(['1','2'].includes(lang))saveLanguage(__dirname,lang==='2'?'en':'ko');continue;}
@@ -81,15 +82,16 @@ async function main(){
         }catch(error){reportError(error);}continue;
       }
       if(choice==='3'){const backups=listBackups(root,game);if(!backups.length)console.log(t('백업 기록이 없습니다. UI 검증 등 준비 단계에서 실패하면 게임 파일은 설치하지 않으며 새 백업도 생성하지 않습니다. 확인한 위치:\n','No backup records found. A failure during UI preflight does not install game files or create a new backup. Locations checked:\n')+path.join(shared.stateRoot(game),'backups')+'\n'+root);for(const x of backups)console.log(x.manifest.status+' '+x.folder);continue;}
-      if(!['1','2','5','6'].includes(choice))continue;
+      if(!['1','2','5','6','10'].includes(choice))continue;
       console.log(t('공통 관리에서는 다른 모드를 보존하며 자판기 설정을 변경합니다. 동일 설정 재적용은 생략합니다.','Shared management preserves other mods when changing vending settings. Identical settings are a no-op.'));
       console.log(t('공통 처리 외부의 변경은 덮어쓰지 않습니다. 전체 백업 복원은 이후 변경이 있으면 차단합니다.','Changes outside shared management are not overwritten. Full restore refuses later changes.'));
       if(['1','6'].includes(choice))console.log(t('검증된 기존 자판기 UI 조각은 백업 후 선택한 구성으로 재구성합니다. 알 수 없는 데칼 함수는 덮어쓰지 않습니다.','Exact reviewed old vending UI fragments are backed up and rebuilt for the selected preset. Unknown decal functions are not overwritten.'));
+      if(choice==='10')console.log(t('재료+탄약 전용 구성입니다. 데칼 교체 메뉴는 추가하지 않고 기존 데칼 관리 함수는 그대로 보존합니다.','Materials + ammo only. Does not add a decal menu or modify existing decal-management functions.'));
       console.log(t('세이브를 별도 백업하세요. 파일 복원은 구매·데칼·충전 결과를 되돌리지 않습니다.','Back up your save separately. File restore does not undo purchases, decal changes or ammo refills.'));
       if(!/^y$/i.test((await rl.question(t('게임 종료 후 진행하세요. 동의합니까? (y/N): ','Close the game completely. Proceed? (y/N): '))).trim()))continue;
       console.log(t('파일 검증·공통 합성 처리 중입니다. 창을 닫지 마세요.','Verifying and composing files. Do not close this window.'));
-      try{console.log(choice!=='2'?formatApplyResult(apply(game,root,{decals:['1','6'].includes(choice),ammo:choice==='1'})):t('복원 완료: ','Restored: ')+restore(game,root));}
-      catch(error){reportError(error,{game,features:{decals:['1','6'].includes(choice),ammo:choice==='1'}});}
+      try{console.log(choice!=='2'?formatApplyResult(apply(game,root,{decals:['1','6'].includes(choice),ammo:['1','10'].includes(choice)})):t('복원 완료: ','Restored: ')+restore(game,root));}
+      catch(error){reportError(error,{game,features:{decals:['1','6'].includes(choice),ammo:['1','10'].includes(choice)}});}
     }
   }finally{rl.close();}
 }

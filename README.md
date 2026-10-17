@@ -1,5 +1,19 @@
 # LET IT DIE Vending Machine Enhancement
 
+## Independent ammo UI — v1.1.7-rc.1 standalone RC
+
+Option **10, materials + ammo**, adds no decal-management entry and patches only
+six reviewed vending/shop functions. All three SkillExchange functions, including
+Tick, and the unused vending Tick/Render remain byte-exact. Required ammo-function
+conflicts still stop installation. Option 1 never silently falls back to this mode.
+Pricing, safe-money payment and the existing save flow are unchanged.
+
+The reporter's actual 11,582-byte function is unavailable. Controlled same-size
+preservation tests are not certification of their file or full decal compatibility.
+TFC is unchanged. Older standalone tools may safely refuse settings changes while
+this new configuration is active; selectively remove this layer using option 2 of
+the updated vending tool first. Never delete shared state or backups to bypass it.
+
 > Steam build 25767944 RC: [validation and limitations](BUILD-25767944-VALIDATION.md). File/engine tests completed; new-build live gameplay pending. / 새 빌드 파일·처리 엔진 검증 완료, 실게임 검증 전.
 
 
@@ -14,7 +28,7 @@ No gameplay settings or DB recipes were changed by this fix.
 
 TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.2-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
 
-Standalone candidate **1.1.6-rc.1**: validates the actual material catalog before
+Previous standalone candidate **1.1.6-rc.1**: validates the actual material catalog before
 skipping reapplication, repairs missing owned rows with a backup, and clearly
 reports the real shared backup location. [Rules and test evidence](COMPATIBILITY-VALIDATION.md).
 

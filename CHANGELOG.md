@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 1.1.7-rc.1 — independent ammo UI (2026-10-18)
+
+- Add explicit standalone option 10 for materials + ammo, without any decal-management function patches or a decal entry. Keep the full-feature action explicit; never silently downgrade it.
+- Derive a six-function ammo-only plan from reviewed insertions, preserve original branches before insertion points, and add Korean/English runtime-bytecode tests.
+- Preserve arbitrary unowned SkillExchange bytes through scoped installation, composition, selective removal and backup restore. Required owned ammo conflicts remain blocked.
+- Support separate ammo and decal receipt flags. Older tools may safely reject this new configuration; remove it with the updated vending tool before using incompatible older installers.
+- No reporter binary was supplied: the 11,582-byte case is a controlled fixture, not the reporter's hash or gameplay certification. TFC and other repositories are unchanged.
+
 ## 1.1.6-rc.1 — standalone UI recovery and diagnostics
 
 - Rebuild only exact reviewed unmanaged stock/bridge combinations for the requested vending preset; back up the real pre-operation image and retain M2G/other functions.

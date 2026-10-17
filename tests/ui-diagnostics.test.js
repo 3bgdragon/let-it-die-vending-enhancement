@@ -49,7 +49,7 @@ test('the actual CLI error handler emits matching text/JSON evidence with select
   assert(json&&log);assert.equal(json.slice('diagnostic-'.length,-5),log.slice('error-'.length,-4));
   const report=JSON.parse(fs.readFileSync(path.join(root,'logs',json)));assert.equal(report.tool,root);assert.equal(report.game,game);
   assert.deepEqual(report.requestedFeatures,features);assert.equal(report.error.failedStagingFunction.actual.size,11296);
-  assert(messages.some(s=>s.includes('Shareable UI diagnostic JSON: ')));assert(messages.some(s=>s.includes('NOT mean decals or ammo')));
+  assert(messages.some(s=>s.includes('Shareable UI diagnostic JSON: ')));assert(messages.some(s=>s.includes('Full installation stopped.')));assert(messages.some(s=>s.includes('Option 10 adds materials + ammo')));
   assert.equal(fs.existsSync(game),false);
  }finally{assert.equal(path.dirname(root),path.resolve(os.tmpdir()));assert(path.basename(root).startsWith('lid-vending-report-'));fs.rmSync(root,{recursive:true,force:true});}
 });

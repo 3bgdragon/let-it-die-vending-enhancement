@@ -1,7 +1,8 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {compile,execute}=require('./helpers/bytecode-vm');
-const plan=require('../src/game-language').localizePlan(require('../patches/vending-build25386710.json'),process.env.LID_TEST_GAME_LANGUAGE||'ko');
+const ammoOnly=process.env.LID_TEST_AMMO_ONLY==='1';
+const plan=require('../src/game-language').localizePlan(ammoOnly?require('../src/ammo-only-plan'):require('../patches/vending-build25386710.json'),process.env.LID_TEST_GAME_LANGUAGE||'ko');
 const sb='BrgUIMenu_ShopBase.',vd='BrgUIMenu_ItemVendingMachine.';
 const compiled=new Map(plan.patches.filter(p=>p.name!==vd+'SetupTopMenu').map(p=>[p.name,compile(p,plan.testSymbols)]));
 function weapon(id,rest=0,spare=0,buy=50000){return {mEnable:true,mItemType:0,mDbPsPart:{mEptid:id,mPtid:'weapon',mLvl:20,mRest:rest,mSpare:spare,mDur:900},mDbPsPartAutoInfo:{mDbPart:{mCapacity:30,mSpare:270,buy}}};}
@@ -13,7 +14,7 @@ function fixture(stock=[weapon('a')],money=10000){
   mPossessionItems:stock.map(x=>({mItemInfo:structuredClone(x)})),mSellMenuSelectIndex:0,mSelectPrice:10000,mDbUserShopHistorys:[],
   mItemSelect:object({mUnits:[],mItemMiniPanel:object({})}),mShopLimitedItems:object({}),
   mUIManager:object({mPlayerCommonPawnNative:native,mUserData:object({money,safeMoney:money,carriedMoney:0}),mCommonStatusMenuPart:object({}),mItemInfoManager:object({}),mEdgeInput:0,
-    mCommonTopMenu2:object({selected:6,idle:true,cancel:false}),mGameInfoNative:object({hide:false}),mSystemWindow:object({done:false,cancel:false,yes:0})})});
+    mCommonTopMenu2:object({selected:ammoOnly?5:6,idle:true,cancel:false}),mGameInfoNative:object({hide:false}),mSystemWindow:object({done:false,cancel:false,yes:0})})});
  f.calls=[];
  f.run=(name,locals={})=>execute(compiled.get(name),f,locals,(n,a,target)=>{
   f.calls.push({n,a});
@@ -45,7 +46,7 @@ function fixture(stock=[weapon('a')],money=10000){
  f.list=()=>f.run(sb+'AddSellCurrentFighterItemSelectPanel');
  return f;
 }
-test('compiled insertions have valid runtime size, context skips and branch targets',()=>assert.equal(compiled.size,10));
+test('compiled insertions have valid runtime size, context skips and branch targets',()=>assert.equal(compiled.size,ammoOnly?5:10));
 test('normal shop and ordinary selling paths bypass the ammo insertion',()=>{
  for(const cls of ['BrgUIMenu_PartShop','BrgUIMenu_ItemVendingMachine'])for(const name of ['SellItem','TickASync','AddSellCurrentFighterItemSelectPanel']){
   const f=fixture();f.$class=cls;f.mTopMenuSelectIndex=0;assert.equal(f.run(sb+name).returned,false);assert.equal(f.calls.length,0);
@@ -104,7 +105,7 @@ test('ammo selection disables top input and enters existing save/list path, menu
  assert.equal(f.mUIManager.mCommonTopMenu2.disabled,true);assert.equal(f.mUIManager.mCommonTopMenu2.ended,true);
  for(const buy of [true,false])for(const hide of [true,false]){
   f.mBuyOnly=buy;f.mUIManager.mGameInfoNative.hide=hide;const last=buy?1:hide?4:5;
-  for(const [offset,value] of [[0,6],[1,7],[2,5]])assert.equal(f.run(vd+'GetMenuDefinition',{Index:last+offset}).value,value);
+  for(const [offset,value] of (ammoOnly?[[0,7],[1,5]]:[[0,6],[1,7],[2,5]]))assert.equal(f.run(vd+'GetMenuDefinition',{Index:last+offset}).value,value);
  }
 });
 test('cancel and sort inputs never enter the destructive sale-sort path',()=>{

@@ -8,6 +8,7 @@ const {patchPackage,linkExecutable}=require('./decal-package');
 const {validatePackageLinks}=require('./executable-links');
 const shared=require('../shared/layers');
 const materialState=require('./material-state');
+const ui=require('./vending-ui');
 const {text:t}=require('./language');
 const FILES=['Binaries/Win64/BrgGame-Steam.exe','BrgGame/Content/masters.db'];
 const PACKAGE='BrgGame/CookedPCConsole/BrgGame.upk';
@@ -26,17 +27,17 @@ function replace(file,bytes){
   try{fs.renameSync(temp,file);}catch(error){fs.unlinkSync(temp);throw error;}
 }
 function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
-  if(ammo)decals=true;
-  stopped();const files=decals?[...FILES,PACKAGE]:FILES,targets=paths(game,files);ensureDbClosed(targets[1]);
+  const settings={decals,ammo},hasUi=ui.active(settings);
+  stopped();const files=hasUi?[...FILES,PACKAGE]:FILES,targets=paths(game,files);ensureDbClosed(targets[1]);
   const originals=targets.map(f=>fs.readFileSync(f));const exe=patchExecutable(originals[0]);
   validatePackageLinks(originals[0],path.resolve(game));
-  const upk=decals?patchPackage(originals[2],ammo?require('../patches/vending-build25386710.json'):undefined):null;
-  if(decals){
+  const upk=hasUi?patchPackage(originals[2],ui.plan(settings)):null;
+  if(hasUi){
     const owned=require('../shared/owned-functions');
-    owned.verifyTransition(originals[2],upk,'vending','BrgGame.upk');
+    owned.verifyTransition(originals[2],upk,'vending','BrgGame.upk',{beforePreset:'off',afterPreset:ui.preset(settings)});
     owned.verifyOthers(originals[2],upk,'vending','BrgGame.upk');
   }
-  if(decals)exe.output=linkExecutable(exe.output,originals[2],upk);
+  if(hasUi)exe.output=linkExecutable(exe.output,originals[2],upk);
   exe.details.after=sha(exe.output);
   const probe=new DatabaseSync(targets[1],{readOnly:true});let rows;
   try{rows=planMaterialCatalog(probe);}finally{probe.close();}
@@ -53,8 +54,8 @@ function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
     if(db.prepare('PRAGMA integrity_check').get().integrity_check!=='ok')throw new Error('패치 DB 무결성 실패');
   }finally{db.close();}
   const outputs=[exe.output,fs.readFileSync(dbStage)];
-  if(decals)outputs.push(upk);
-  const manifest={version:decals?2:1,toolVersion:require('../package.json').version,game:path.resolve(game),status:'prepared',decals,ammo,rows:rows.length,files:files.map((name,i)=>({name,before:sha(originals[i]),after:sha(outputs[i])})),exe:exe.details};
+  if(hasUi)outputs.push(upk);
+  const manifest={version:hasUi?2:1,toolVersion:require('../package.json').version,game:path.resolve(game),status:'prepared',decals,ammo,rows:rows.length,files:files.map((name,i)=>({name,before:sha(originals[i]),after:sha(outputs[i])})),exe:exe.details};
   const mpath=path.join(folder,'manifest.json');
   const save=()=>fs.writeFileSync(mpath,JSON.stringify(manifest,null,2));save();
   // Recheck both files before first write: avoid replacing intervening changes.
@@ -70,7 +71,7 @@ function applyRaw(game,backupRoot,{decals=false,ammo=false}={}) {
   return {backup:folder,rows:rows.length,decals,ammo};
 }
 function apply(game,backupRoot,{decals=false,ammo=false}={}){
- if(ammo)decals=true;stopped();shared.adopt(game,process.env.LID_VENDING_BACKUP_DIR||backupRoot);
+ stopped();shared.adopt(game,process.env.LID_VENDING_BACKUP_DIR||backupRoot);
  const prior=shared.receipt(game),language=t('ko','en');
  const dbfile=paths(game)[1];ensureDbClosed(dbfile);
  let catalog;
@@ -102,12 +103,12 @@ function apply(game,backupRoot,{decals=false,ammo=false}={}){
   // shared backup captures the REAL pre-operation partial image; the removable
   // baseline records only the normalized owned UI, never a guessed full UPK.
   let recoveredUiFunctions=0;
-  if(decals&&(!prior||!prior.config.decals)){
-   const file=path.join(stage,PACKAGE),beforeUi=fs.readFileSync(file),ui=require('./ui-recovery').plan(beforeUi);
-   if(ui.functions){
+  if(ui.active({decals,ammo})&&(!prior||!ui.active(prior.config))){
+   const file=path.join(stage,PACKAGE),beforeUi=fs.readFileSync(file),recovery=require('./ui-recovery').plan(beforeUi,ammo&&!decals?{scopePreset:ui.preset({decals,ammo})}:{});
+   if(recovery.functions){
     const exeFile=path.join(stage,FILES[0]),beforeExe=fs.readFileSync(exeFile);
-    replace(file,ui.output);replace(exeFile,linkExecutable(beforeExe,beforeUi,ui.output));
-    recoveredUiFunctions=ui.functions;
+    replace(file,recovery.output);replace(exeFile,linkExecutable(beforeExe,beforeUi,recovery.output));
+    recoveredUiFunctions=recovery.functions;
    }
   }
   const base=[fs.readFileSync(path.join(stage,FILES[0])),fs.readFileSync(path.join(stage,PACKAGE))];

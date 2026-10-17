@@ -5,6 +5,17 @@ const {reader}=require('./scoped-package');
 const {pack,words}=require('./kernel/src/package-codec');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const catalog=require('./owned-functions.json');
+// Ammo-only owns six reviewed functions, not the mushroom-shop bridge.
+const ammoPlan=require('../src/ammo-only-plan'),localize=require('../src/game-language').localizePlan;
+const vendingRows=[...new Map(catalog.objects.filter(p=>p.mod==='vending'&&p.file==='BrgGame.upk').map(p=>[p.index,p])).values()];
+for(const language of ['ko','en']){
+ const plan=localize(ammoPlan,language);
+ for(const row of vendingRows){
+  const off=Buffer.from(row.off,'base64'),patch=plan.patches.find(p=>p.export===row.index+1);
+  const on=patch?require('./kernel/src/decal-package').patchFunction(off,patch):off;
+  catalog.objects.push({...row,preset:'ammo-'+language,on:on.toString('base64'),onHash:sha(on),onMetadata:row.metadata});
+ }
+}
 const groups=new Map();
 const foreignOffContexts=new WeakMap();
 for(const row of catalog.objects){
@@ -39,7 +50,7 @@ function foreignOffCompatible(bytes,variants){
   const inserted=Buffer.concat([code.subarray(0,plan.at),Buffer.from(plan.insert,'hex'),code.subarray(plan.at)]),header=Buffer.from(stock.subarray(0,0x30));
   header.writeUInt32LE(plan.scriptMemory+plan.extraMemory,0x28);header.writeUInt32LE(inserted.length,0x2c);
   const expected=Buffer.concat([header,inserted,stock.subarray(0x30+plan.scriptSize)]);
-  if(variants.some(p=>!p.off.equals(stock)||!p.on.equals(expected)))throw Error('Foreign OFF-layout preset evidence mismatch');
+  if(variants.some(p=>!p.off.equals(stock)||!p.on.equals(/^ammo-(ko|en)$/.test(p.preset)?stock:expected)))throw Error('Foreign OFF-layout preset evidence mismatch');
   const start=0x30+plan.at,end=0x30+plan.scriptSize;
   windows=[[0,0x30],[Math.max(0x30,start-16),Math.min(end,start+16)],[end,stock.length]];
   for(const jump of plan.jumps){const at=0x30+jump.at;if(at<0x30||at+2>end||stock.readUInt16LE(at)!==jump.before)throw Error('Foreign OFF-layout branch evidence mismatch');windows.push([Math.max(0x30,at-1),at+2]);}
@@ -56,6 +67,7 @@ function recognize(bytes,variants){
 }
 function merge(bytes,variants,preset){
  const target=preset==='off'?variants[0].off:(variants.find(p=>p.preset===preset)?.on||variants[0].off);
+ if(/^ammo-(ko|en)$/.test(preset)&&!owns(variants,preset))return Buffer.from(bytes);
  if(recognize(bytes,variants)===null)throw Error(`Owned instruction conflict: ${variants[0].mod} ${variants[0].file} export ${variants[0].index}; no files changed / 소유 명령어 충돌`);
  const c=context(variants);
  if(!c){
@@ -90,14 +102,20 @@ function inspect(source,mod,file){
  const {rows}=objects(source,mod,file);
  const presets=['off',...new Set(rows.flatMap(o=>o.variants.map(p=>p.preset)))];
  for(const preset of presets)if(rows.every(o=>{
-  if(o.state===null)return false;
+  if(o.state===null&&!(/^ammo-(ko|en)$/.test(preset)&&!owns(o.variants,preset)))return false;
   try{return merge(o.bytes,o.variants,preset).equals(o.bytes);}catch{return false;}
  }))return preset;
  throw Error(`Conflicting/partial ${mod} package: ${file} / 모드 함수 충돌·부분 적용`);
 }
-function set(source,mod,file,preset){
+function owns(variants,preset){
+ if(preset==='off')return false;
+ const p=variants.find(p=>p.preset===preset);if(!p)throw Error('Unknown scoped ownership preset: '+preset);
+ return !p.on.equals(p.off);
+}
+function set(source,mod,file,preset,{scopePreset=null}={}){
  if(!['off',...new Set(catalog.objects.filter(p=>p.mod===mod&&p.file===file).map(p=>p.preset))].includes(preset))throw Error('Unknown owned preset');
- const {r,rows}=objects(source,mod,file),replacements=rows.map(o=>({...o,next:merge(o.bytes,o.variants,preset)}));
+ if(scopePreset!==null&&!/^ammo-(ko|en)$/.test(scopePreset))throw Error('Invalid selective UI scope');
+ const {r,rows}=objects(source,mod,file),replacements=rows.map(o=>({...o,next:scopePreset&&!owns(o.variants,scopePreset)?Buffer.from(o.bytes):merge(o.bytes,o.variants,preset)}));
  if(replacements.every(o=>o.bytes.equals(o.next)))return source;
  const last=r.table.length-1,tail=[r.chunk(last)];let logical=r.table[last][0]+r.table[last][1];
  for(const o of replacements){
@@ -122,11 +140,16 @@ function set(source,mod,file,preset){
  }
  return output;
 }
-function verifyTransition(before,after,mod,file){
+function verifyTransition(before,after,mod,file,scope=null){
+ if(scope&&(mod!=='vending'||file!=='BrgGame.upk'||!['beforePreset','afterPreset'].every(k=>typeof scope[k]==='string')))throw Error('Invalid scoped transition');
  const b=objects(before,mod,file),a=objects(after,mod,file);
  for(const o of a.rows){
-  if(o.state===null)throw Error('Installation left unknown owned instructions: '+mod+'/'+o.index);
   const old=b.rows.find(x=>x.index===o.index);
+  if(scope&&!owns(o.variants,scope.beforePreset)&&!owns(o.variants,scope.afterPreset)){
+   if(!old.bytes.equals(o.bytes))throw Error('Unselected UI function changed: '+o.index);
+   continue;
+  }
+  if(o.state===null)throw Error('Installation left unknown owned instructions: '+mod+'/'+o.index);
   if(!merge(old.bytes,o.variants,o.state).equals(o.bytes))throw Error('Installation overwrote foreign function bytes: '+mod+'/'+o.index);
  }
  return true;
@@ -141,4 +164,4 @@ function verifyOthers(before,after,mod,file){
  }
  return true;
 }
-module.exports={inspect,set,objects,merge,recognize,group,verifyTransition,verifyOthers,sha,catalog};
+module.exports={inspect,set,objects,merge,recognize,group,verifyTransition,verifyOthers,owns,sha,catalog};

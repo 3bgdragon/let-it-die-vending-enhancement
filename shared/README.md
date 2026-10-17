@@ -80,3 +80,14 @@ node --no-warnings dev/test-shared-composition.js --matrix --source "stock game 
 `--db "stock masters.db"` selects a separate source DB if needed. Sources are only
 read; generated copies live under `.work`. The developer bundler is
 `dev/build-shared-layers.js`; preserve identical kernel and test bytes across peers.
+
+## Standalone ammo-only scope (1.1.7-rc.1 RC)
+
+The vending checkout adds a reviewed six-function ammo-only profile. Its
+identity transformations preserve all five unselected UI functions, including
+opaque/resized SkillExchange bodies. Scoped transition proofs still require
+byte-exact preservation and retain normal ownership checks for selected code.
+Shared receipts can now express ammo=true/decals=false. Older sibling tools may
+refuse that configuration safely; do not copy this shared folder into them or
+delete receipts to bypass the refusal. Remove the vending layer using this
+updated checkout before operating an incompatible older installer.

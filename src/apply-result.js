@@ -5,7 +5,8 @@ function format(result){
  if(result.repairedMaterials)lines.push(t('누락 재료 상품 복구: ','Missing material entries restored: ')+result.repairedMaterials);
  if(result.recoveredUiFunctions)lines.push(t('검증된 기존 자판기 UI 연결 재구성: ','Rebuilt reviewed old vending UI bridges: ')+result.recoveredUiFunctions);
  lines.push(t('선택 기능: 재료 ON / 데칼 ','Selected features: materials ON / decals ')+(result.decals?'ON':'OFF')+t(' / 탄약 ',' / ammo ')+(result.ammo?'ON':'OFF'));
- if(result.decals===false)lines.push(t('재료 단독은 기존 UI를 변경하지 않습니다. 위 OFF는 이번 설정에서 UI를 적용하지 않았다는 뜻입니다.','Materials-only leaves existing UI untouched. OFF above means this layer did not enable that UI.'));
+ if(result.decals===false&&!result.ammo)lines.push(t('재료 단독은 기존 UI를 변경하지 않습니다. 위 OFF는 이번 설정에서 UI를 적용하지 않았다는 뜻입니다.','Materials-only leaves existing UI untouched. OFF above means this layer did not enable that UI.'));
+ if(result.ammo&&!result.decals)lines.push(t('탄약 전용 구성: 데칼 관리 함수는 변경하지 않았습니다. 데칼 교체 메뉴는 추가하지 않습니다.','Ammo-only UI: decal management functions are unchanged; no decal management entry is added.'));
  if(result.backup)lines.push(t('새 변경 전 백업 생성: ','New pre-change backup created: ')+result.backup);
  else{
   lines.push(t('파일 변경이 없어 새 백업을 만들지 않았습니다.','No files changed; no new backup was created.'));
