@@ -42,11 +42,13 @@ function receipt(game){
  if(!fs.existsSync(statePath(game)))return null;
  const r=readJson(statePath(game));
  if(![1,2].includes(r.format)||typeof r.active!=='boolean')fail('Invalid shared mod state / 공통 모드 기록 형식 오류');
+ const updated=require('./updated-state').notice(game,r);if(updated)fail(updated);
  return r.active?r:null;
 }
 function layoutState(game){
  if(!fs.existsSync(statePath(game)))return null;
- const value=readJson(statePath(game)).layout;
+ const recorded=readJson(statePath(game));const updated=require('./updated-state').notice(game,recorded);if(updated)fail(updated);
+ const value=recorded.layout;
  if(value===undefined||value===null)return null;
  if(value.format!==1||!/^[a-f0-9-]{36}$/.test(value.generation)||!Array.isArray(value.before)||!Array.isArray(value.after)||value.before.length!==3||value.after.length!==3||[...value.before,...value.after].some(x=>! /^[a-f0-9]{64}$/.test(x)))fail('Invalid package layout receipt / UPK 배치 기록 오류');
  return value;
@@ -134,7 +136,7 @@ function basePair(game,r,allowedMod=null){
   // Rebase only known owned functions. Never restore the old whole package:
   // Nico's independent byte edits must remain in the new underlying image.
   const owned=require('./owned-functions'),file='BrgGame.upk',expected=compose(base,r.config);
-  if(base[1].length<0x25||base[1].readUInt32LE(0x21)!==173671)fail('Shared files changed outside composition; scoped layout unavailable');
+  if(base[1].length<0x25||![173671,173715].includes(base[1].readUInt32LE(0x21)))fail('Shared files changed outside composition; scoped layout unavailable');
   for(const mod of new Set(owned.catalog.objects.filter(p=>p.file===file).map(p=>p.mod))){
    const old=owned.objects(expected[1],mod,file).rows,now=owned.objects(current[1],mod,file).rows;
    for(const row of old)if(mod!==allowedMod){
@@ -263,7 +265,7 @@ function transact(game,kind,fn,{checkRunning=running,compact=false,acceptLostMod
   }
   if(previous||Object.hasOwn(action,'vending'))require('./kernel/src/executable-links').validatePackageLinks(fs.readFileSync(path.join(s.game,FILES[0])),s.game);
   const raw=capture(s.game),after=(compact||layoutState(game))?require('./package-layout').pair(raw):raw,result=action.result;
-  if(before[1].length>0x25&&before[1].readUInt32LE(0x21)===173671){
+  if(before[1].length>0x25&&[173671,173715].includes(before[1].readUInt32LE(0x21))){
    const owned=require('./owned-functions');
    for(const [index,file] of [[1,'BrgGame.upk'],[2,'AS_CH_Main_Male_Common_SF.upk']]){
     const ui=require('./kernel/src/vending-ui'),nextConfig=Object.hasOwn(action,'vending')?action.vending?.config:previous?.config;

@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 1.1.9-rc.1 / TFC 1.2.3-rc.1 — build 25923506 (2026-10-23)
+
+- Add separately audited native locations and UPK object/name references for the new Steam build; retain the prior build profiles and reject unknown owned-instruction changes.
+- Select verified new TFC templates and validate actual installed functions rather than trusting an updated-object count.
+- Correct decal-only ownership for functions untouched by that preset, retain ammo-only and KO/EN selection, and report current-build diagnostic names/indices/hashes.
+- Add explicit stock-only Steam-update state preservation for standalone/TFC receipts. No state deletion, automatic recovery or old-build whole-file restore.
+- See BUILD-25923506-VALIDATION.md for file/engine tests and outstanding live-game validation.
+
 ## 1.1.8-rc.1 — exact reported Tick composition (2026-10-18)
 
 - Analyze the actual diagnostic function SHA-256 `66b852e2…` and reconstruct its exact 11,582-byte OFF image from reviewed stock plus a compact delta.

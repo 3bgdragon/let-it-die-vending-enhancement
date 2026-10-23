@@ -41,8 +41,12 @@ test('ammo-only installer preserves a foreign 11582-byte Tick and M2G through ap
  });
  await t.test('same selected mode is a verified no-op',()=>{const h=hash(),n=shared.backups(game,'vending').length;assert.equal(patcher.apply(game,legacy,{decals:false,ammo:true}).changed,false);assert.deepEqual(hash(),h);assert.equal(shared.backups(game,'vending').length,n);verify();});
  await t.test('missing material rows repair without requiring ownership of foreign Tick',()=>{const d=new DatabaseSync(path.join(game,FILES[5]));d.exec('DELETE FROM master_automaticshop_lineup WHERE goods_id=(SELECT min(goods_id) FROM master_automaticshop_lineup WHERE goods_id>=1900000000 AND goods_id<1900010000)');d.close();assert.equal(count(),105);const before=fs.readFileSync(upkFile),r=patcher.apply(game,legacy,{decals:false,ammo:true});assert(r.changed&&r.backup);assert.equal(r.repairedMaterials,1);assert.equal(count(),106);assert.deepEqual(fs.readFileSync(upkFile),before);verify();});
- await t.test('older shared tooling safely rejects the new configuration instead of overwriting it',()=>{
-  if(process.env.LID_COMPAT_TOOL_ROOT){const old=require(path.join(process.env.LID_COMPAT_TOOL_ROOT,'m2g/shared/layers')),h=hash();assert.throws(()=>old.view(game,()=>{throw Error('must not call');}),/settings|설정/);assert.deepEqual(hash(),h);verify();}
+ await t.test('current shared tooling reads ammo-only layers without changing files or unowned Tick',()=>{
+  if(process.env.LID_COMPAT_TOOL_ROOT)for(const mod of ['guard','warp','m2g']){
+   const current=require(path.join(process.env.LID_COMPAT_TOOL_ROOT,mod,'shared/layers')),h=hash(),receipt=fs.readFileSync(path.join(game,'LID-Mod-State/state.json')),backups=shared.backups(game).length;
+   assert.equal(current.view(game,stage=>{assert.ok(fs.existsSync(path.join(stage,FILES[1])));return 'checked-'+mod;}),'checked-'+mod);
+   assert.deepEqual(hash(),h);assert.ok(fs.readFileSync(path.join(game,'LID-Mod-State/state.json')).equals(receipt));assert.equal(shared.backups(game).length,backups);verify();
+  }
  });
  await t.test('switching English/Korean ammo labels preserves foreign Tick',()=>{for(const language of ['en','ko']){lang.setLanguage(language);assert(patcher.apply(game,legacy,{decals:false,ammo:true}).changed);assert.equal(owned.inspect(fs.readFileSync(upkFile),'vending','BrgGame.upk'),'ammo-'+language);verify();}});
  await t.test('explicit all-feature request still blocks unknown decal code without downgrading or destroying ammo installation',()=>{const h=hash(),n=shared.backups(game,'vending').length;assert.throws(()=>patcher.apply(game,legacy,{decals:true,ammo:true}),e=>e.code==='LID_VENDING_UI_CONFLICT');assert.deepEqual(hash(),h);assert.equal(shared.backups(game,'vending').length,n);verify();});

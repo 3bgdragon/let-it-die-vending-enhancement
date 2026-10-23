@@ -1,5 +1,13 @@
 # LET IT DIE Vending Machine Enhancement
 
+## Steam build 25923506 compatibility update (2026-10-23)
+
+Uses separately reviewed native locations and/or build-specific UPK object/name references. Unknown instruction conflicts are still blocked; old-build support is retained. [Validation and limits](BUILD-25923506-VALIDATION.md).
+
+If Steam replaced the game files but left old mod state, **do not delete state/backups or restore an old-build snapshot**. Read [safe update recovery](RECOVER-STEAM-UPDATE.md). This recovery requires all six files to match the reviewed new stock build and preserves the entire old state folder. It is never automatic.
+
+TFC is a separate distribution. Generate a fresh TFC preparation folder for the new build; do not reuse an old prepared patch. File/engine tests are distinct from live gameplay verification.
+
 ## Reviewed reported Tick compatibility — v1.1.8-rc.1
 
 Option 1 can now compose the exact reported SkillExchange.Tick function

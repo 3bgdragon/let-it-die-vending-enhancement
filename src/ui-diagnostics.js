@@ -4,8 +4,8 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const owned=require('../shared/owned-functions'),plan=require('../patches/vending-build25386710.json');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const FILE='BrgGame/CookedPCConsole/BrgGame.upk';
-function classify(bytes,index){
- const v=owned.group('vending','BrgGame.upk',index),digest=sha(bytes);
+function classify(bytes,index,variants=null){
+ const v=variants||owned.group('vending','BrgGame.upk',index),digest=sha(bytes);
  if(!v)return {state:'unreviewed'};
  if(v[0].offHash===digest&&bytes.length===v[0].off.length)return {state:'reviewed-stock'};
  if(index===91836){
@@ -29,11 +29,11 @@ function collect(game,{tool=path.resolve(__dirname,'..'),features=null,error=nul
   if(data.length>=0x75)report.package.header={tag:data.readUInt32LE(0),version:data.readUInt16LE(4),licenseeVersion:data.readUInt16LE(6),exports:data.readUInt32LE(0x21),compressedChunks:data.readUInt32LE(0x71)};
   const rows=owned.objects(data,'vending','BrgGame.upk').rows;
   report.functions=rows.map(row=>{
-   const p=plan.patches.find(p=>p.export===row.index+1),bytes=row.bytes;
-   return {expectedName:p?.name||null,export:row.index+1,index:row.index,size:bytes.length,sha256:sha(bytes),
+   const v=row.variants[0],p=plan.patches.find(p=>p.export===(v.canonicalIndex??row.index)+1),bytes=row.bytes,stock=v.off;
+   return {expectedName:v.name||p?.name||null,export:row.index+1,index:row.index,size:bytes.length,sha256:sha(bytes),
     scriptSize:bytes.length>=0x30?bytes.readUInt32LE(0x2c):null,scriptMemory:bytes.length>=0x30?bytes.readUInt32LE(0x28):null,
-    expectedStock:p?{size:p.size,sha256:p.before,scriptSize:p.scriptSize,scriptMemory:p.scriptMemory}:null,
-    ...classify(bytes,row.index),serializedDataBase64:bytes.length<=1024*1024?bytes.toString('base64'):null};
+    expectedStock:p?{size:stock.length,sha256:v.offHash,scriptSize:stock.readUInt32LE(0x2c),scriptMemory:stock.readUInt32LE(0x28)}:null,
+    ...classify(bytes,row.index,row.variants),serializedDataBase64:bytes.length<=1024*1024?bytes.toString('base64'):null};
   });
   // Current package and staged-image evidence are kept separate. An active
   // receipt may temporarily remove its layer before a new build is attempted.

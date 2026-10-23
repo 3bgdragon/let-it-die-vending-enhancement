@@ -6,7 +6,7 @@ const {pack,words}=require('./kernel/src/package-codec');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const catalog=require('./owned-functions.json');
 // Ammo-only owns six reviewed functions, not the mushroom-shop bridge.
-const ammoPlan=require('../src/ammo-only-plan'),localize=require('../src/game-language').localizePlan;
+const ammoPlan=require('./kernel/src/ammo-only-plan'),localize=require('./kernel/src/game-language').localizePlan;
 const vendingRows=[...new Map(catalog.objects.filter(p=>p.mod==='vending'&&p.file==='BrgGame.upk').map(p=>[p.index,p])).values()];
 for(const language of ['ko','en']){
  const plan=localize(ammoPlan,language);
@@ -17,6 +17,13 @@ for(const language of ['ko','en']){
  }
 }
 const groups=new Map();
+// A separate reviewed catalog retains old-build receipts and never mixes refs.
+const currentCatalog=require('./owned-functions-25923506.json'),currentGroups=new Map();
+for(const row of currentCatalog.objects){
+ const p={...row,off:Buffer.from(row.off,'base64'),on:Buffer.from(row.on,'base64')};
+ if(sha(p.off)!==row.offHash||sha(p.on)!==row.onHash)throw Error('Current owned function evidence damaged');
+ const key=p.mod+'/'+p.file+'/'+p.index;if(!currentGroups.has(key))currentGroups.set(key,[]);currentGroups.get(key).push(p);
+}
 const foreignOffContexts=new WeakMap();
 for(const row of catalog.objects){
  const p={...row,off:Buffer.from(row.off,'base64'),on:Buffer.from(row.on,'base64')};
@@ -83,7 +90,8 @@ function merge(bytes,variants,preset){
  const out=Buffer.from(bytes);for(const i of c.edits)out[i]=target[i];return out;
 }
 function objects(source,mod,file){
- const wanted=new Map([...groups.values()].filter(v=>v[0].mod===mod&&v[0].file===file).map(v=>[v[0].index,v]));
+ const selected=file==='BrgGame.upk'&&source.readUInt32LE(0x21)===173715?currentGroups:groups;
+ const wanted=new Map([...selected.values()].filter(v=>v[0].mod===mod&&v[0].file===file).map(v=>[v[0].index,v]));
  if(!wanted.size)throw Error('No reviewed ownership plan: '+mod+'/'+file);
  const r=reader(source),count=source.readUInt32LE(0x21),rows=[];let at=source.readUInt32LE(0x25);
  const existing=[...wanted].filter(([,v])=>v[0].off.length).map(([i])=>i);
@@ -111,13 +119,18 @@ function inspect(source,mod,file){
 }
 function owns(variants,preset){
  if(preset==='off')return false;
- const p=variants.find(p=>p.preset===preset);if(!p)throw Error('Unknown scoped ownership preset: '+preset);
- return !p.on.equals(p.off);
+ const p=variants.find(p=>p.preset===preset);if(p)return !p.on.equals(p.off);
+ const v=variants[0];
+ // Reviewed UI presets intentionally omit functions they do not own.
+ if(v.mod==='vending'&&v.file==='BrgGame.upk'&&/^(?:decals|all|ammo)-(ko|en)$/.test(preset)&&
+    [...catalog.objects,...currentCatalog.objects].some(p=>p.mod===v.mod&&p.file===v.file&&p.preset===preset))return false;
+ throw Error('Unknown scoped ownership preset: '+preset);
 }
 function isTick(v){return v[0].mod==='vending'&&v[0].file==='BrgGame.upk'&&v[0].index===91836;}
 function reviewed(bytes,variants){return bytes.equals(variants[0].off)||variants.some(p=>bytes.equals(p.on))||(isTick(variants)&&require('./kernel/src/tick-compat').identify(bytes,variants[0].off)!==null);}
 function set(source,mod,file,preset,{scopePreset=null}={}){
- if(!['off',...new Set(catalog.objects.filter(p=>p.mod===mod&&p.file===file).map(p=>p.preset))].includes(preset))throw Error('Unknown owned preset');
+ const known=file==='BrgGame.upk'&&source.readUInt32LE(0x21)===173715?currentCatalog:catalog;
+ if(!['off',...new Set(known.objects.filter(p=>p.mod===mod&&p.file===file).map(p=>p.preset))].includes(preset))throw Error('Unknown owned preset');
  if(scopePreset!==null&&!/^ammo-(ko|en)$/.test(scopePreset))throw Error('Invalid selective UI scope');
  const {r,rows}=objects(source,mod,file),replacements=rows.map(o=>({...o,next:scopePreset&&!owns(o.variants,scopePreset)?Buffer.from(o.bytes):merge(o.bytes,o.variants,preset)}));
  if(replacements.every(o=>o.bytes.equals(o.next)))return source;
