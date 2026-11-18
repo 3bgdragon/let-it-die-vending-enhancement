@@ -2,6 +2,8 @@
 
 ## 1.1.10-rc.1 / TFC 1.2.4-rc.1 — build 26639365 candidate (2026-11-19)
 
+- Handle Windows legacy-backup migration rename locks with bounded retries and repeated source/stage/destination checks. Persistent or unrelated failures still stop without replacing other backups; 13 focused tests passed.
+
 - Rebuild custom menu insertions on the new 5.0.6 vanilla program, preserving Deathroid disassembly menu 6 and native states 16–22. Decal/ammo menus use 7/8; the decal modal uses state 23 without changing ordinary state 7.
 - Use the observed new native StartShop state base 23 for navigation/confirmation/save validation. Add actual-insertion KO/EN full/ammo/decal tests and independent new-vanilla inverse preservation checks.
 - Add separately reviewed EXE dependencies, package references, reversible warp/map composition data and current-build TFC templates. Retain older profiles and same-object conflict checks.

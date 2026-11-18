@@ -62,3 +62,30 @@ test('unfinished migration records are never restore candidates',t=>{
  const root=backupRoot(tool),stage=path.join(root,'.migration-interrupted');fs.mkdirSync(stage,{recursive:true});
  fs.writeFileSync(path.join(stage,'manifest.json'),JSON.stringify(m));assert.equal(listBackups(root,game).length,0);
 });
+
+const windowsOnly={skip:process.platform!=='win32'};
+function renameFault(t,fn){const real=fs.renameSync;fs.renameSync=(...args)=>fn(real,...args);t.after(()=>{fs.renameSync=real;});}
+function locked(){return Object.assign(new Error('temporary backup rename locked'),{code:'EPERM'});}
+test('Windows transient migration rename retries preserve verified originals',windowsOnly,t=>{
+ const {tool,game}=setup(t),{folder}=fixture(tool,game);let attempts=0;
+ renameFault(t,(real,...args)=>{if(++attempts<3)throw locked();return real(...args);});
+ const result=prepareBackups(tool);assert.equal(attempts,3);assert.equal(result.copied.length,1);assert.equal(listBackups(result.root,game).length,1);assert(fs.existsSync(folder));
+});
+test('Windows persistent migration lock stops after five attempts without publishing',windowsOnly,t=>{
+ const {tool,game}=setup(t),{folder}=fixture(tool,game);let attempts=0;
+ renameFault(t,()=>{attempts++;throw locked();});assert.throws(()=>prepareBackups(tool),/locked/);assert.equal(attempts,5);assert(fs.existsSync(folder));assert.equal(listBackups(backupRoot(tool),game).length,0);
+});
+test('Windows migration retry never replaces a newly appeared destination',windowsOnly,t=>{
+ const {tool,game}=setup(t);fixture(tool,game);let attempts=0,marker;
+ renameFault(t,(real,from,to)=>{attempts++;fs.mkdirSync(to);marker=path.join(to,'external');fs.writeFileSync(marker,'retain');throw locked();});
+ assert.throws(()=>prepareBackups(tool),/덮어쓰지/);assert.equal(attempts,1);assert.equal(fs.readFileSync(marker,'utf8'),'retain');
+});
+for(const change of ['source','stage'])test('Windows retry refuses changed '+change+' backup bytes',windowsOnly,t=>{
+ const {tool,game}=setup(t),{folder}=fixture(tool,game);let attempts=0;
+ renameFault(t,(real,from)=>{attempts++;fs.writeFileSync(path.join(change==='source'?folder:from,'original-0'),'external change');throw locked();});
+ assert.throws(()=>prepareBackups(tool),/해시/);assert.equal(attempts,1);assert(fs.existsSync(folder));assert.equal(listBackups(backupRoot(tool),game).length,0);
+});
+test('migration errors outside Windows transient permission/busy codes are not retried',t=>{
+ const {tool,game}=setup(t);fixture(tool,game);let attempts=0;
+ renameFault(t,()=>{attempts++;throw Object.assign(new Error('unrelated IO error'),{code:'EIO'});});assert.throws(()=>prepareBackups(tool),/unrelated IO/);assert.equal(attempts,1);
+});

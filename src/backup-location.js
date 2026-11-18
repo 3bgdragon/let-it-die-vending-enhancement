@@ -22,6 +22,20 @@ function verify(folder){
  return m;
 }
 function identity(m){return JSON.stringify({version:m.version,game:path.resolve(m.game).toLowerCase(),files:m.files.map(f=>({name:f.name,before:f.before.toLowerCase(),after:f.after.toLowerCase()}))});}
+function publishMigration(stage,destination,source,manifest){
+ const delays=[50,100,200,400];
+ for(let attempt=0;;attempt++){
+  if(fs.existsSync(destination))throw new Error('백업 복사 중 같은 이름의 대상이 생겼습니다. 덮어쓰지 않습니다: '+destination);
+  if(attempt){
+   if(JSON.stringify(verify(source))!==JSON.stringify(manifest)||JSON.stringify(verify(stage))!==JSON.stringify(manifest))throw new Error('재시도 중 백업 기록이 변경되었습니다: '+stage);
+  }
+  try{fs.renameSync(stage,destination);return;}
+  catch(error){
+   if(process.platform!=='win32'||!['EPERM','EACCES','EBUSY'].includes(error.code)||attempt>=delays.length)throw error;
+   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,delays[attempt]);
+  }
+ }
+}
 function prepareBackups(toolDir){
  const root=backupRoot(toolDir),legacy=path.join(path.resolve(toolDir),'backups');
  if(fs.existsSync(root))plain(root,true);
@@ -51,7 +65,7 @@ function prepareBackups(toolDir){
   if(JSON.stringify(sourceNow)!==JSON.stringify(m))throw new Error('복사 중 원본 백업 기록이 변경되었습니다: '+source);
   fs.writeFileSync(path.join(stage,'manifest.json'),JSON.stringify(m,null,2),{flag:'wx'});
   verify(stage);
-  fs.renameSync(stage,destination);copied.push(destination);
+  publishMigration(stage,destination,source,m);copied.push(destination);
  }
  return {root,copied};
 }

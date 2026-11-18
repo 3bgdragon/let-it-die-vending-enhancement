@@ -36,6 +36,8 @@ Private evidence: input-manifest.json, native-address-analysis.json, native-relo
 
 ## Boundaries
 
+Pre-publication ZIP testing also reproduced intermittent Windows EPERM while publishing a verified legacy backup migration directory. The standalone migration now retries only EPERM/EACCES/EBUSY on Windows, at most five rename attempts (50/100/200/400 ms waits). Every retry revalidates original/staged manifests and hashes and refuses a newly appeared destination. Persistent locks, unrelated IO errors and changed backups remain failures; original backups are retained. All 13 focused migration tests passed, including six new bounded-retry/change/conflict cases. This is additional focused validation after the baseline nine-suite batch above. It does not add retries to game-file installation or weaken patch conflict checks.
+
 Standalone and TFC remain separate installation methods. TFC writes UPK components; its native companion writes only its scoped EXE/DB components. This mod's shared compatibility data does not automatically enable other mods. Keep state and independent save backups; never restore an old-build whole-file snapshot over an updated game.
 
 Real game combat/travel/Just Guard, Deathroid disassembly, purchases, daily reset and saved/relogin persistence still need user confirmation. Arbitrary third-party or Nico-manager GUI combinations are not certified. All mutation tests used disposable copies; live game/save/state were untouched. Publication status is recorded on GitHub; this report describes the pre-publication offline validation.
