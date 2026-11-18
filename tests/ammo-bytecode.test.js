@@ -2,7 +2,8 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {compile,execute}=require('./helpers/bytecode-vm');
 const ammoOnly=process.env.LID_TEST_AMMO_ONLY==='1';
-const plan=require('../src/game-language').localizePlan(ammoOnly?require('../src/ammo-only-plan'):require('../patches/vending-build25386710.json'),process.env.LID_TEST_GAME_LANGUAGE||'ko');
+const modern=process.env.LID_TEST_UI_BUILD==='26639365',stateBase=modern?23:18,ammoMenu=modern?8:7,decalMenu=modern?7:6;
+const plan=modern?require('./helpers/current-ui-plan').plan(ammoOnly?'ammo':'all',process.env.LID_TEST_GAME_LANGUAGE||'ko'):require('../src/game-language').localizePlan(ammoOnly?require('../src/ammo-only-plan'):require('../patches/vending-build25386710.json'),process.env.LID_TEST_GAME_LANGUAGE||'ko');
 const sb='BrgUIMenu_ShopBase.',vd='BrgUIMenu_ItemVendingMachine.';
 const compiled=new Map(plan.patches.filter(p=>p.name!==vd+'SetupTopMenu').map(p=>[p.name,compile(p,plan.testSymbols)]));
 function weapon(id,rest=0,spare=0,buy=50000){return {mEnable:true,mItemType:0,mDbPsPart:{mEptid:id,mPtid:'weapon',mLvl:20,mRest:rest,mSpare:spare,mDur:900},mDbPsPartAutoInfo:{mDbPart:{mCapacity:30,mSpare:270,buy}}};}
@@ -10,11 +11,11 @@ const object=extras=>({$object:true,...extras});
 function fixture(stock=[weapon('a')],money=10000){
  const native=object({mDeathBag:structuredClone(stock),mEquipPartInfo:Array.from({length:8},()=>({mEnable:false}))});
  native.mEquipPartInfo[2]=structuredClone(stock[0]||{mEnable:false});
- const f=object({$class:'BrgUIMenu_ItemVendingMachine',mTopMenuSelectIndex:7,mOtherStateNum:18,mState:31,mStateFirst:false,
+ const f=object({$class:'BrgUIMenu_ItemVendingMachine',mTopMenuSelectIndex:ammoMenu,mOtherStateNum:stateBase,mState:stateBase+13,mStateFirst:false,
   mPossessionItems:stock.map(x=>({mItemInfo:structuredClone(x)})),mSellMenuSelectIndex:0,mSelectPrice:10000,mDbUserShopHistorys:[],
   mItemSelect:object({mUnits:[],mItemMiniPanel:object({})}),mShopLimitedItems:object({}),
-  mUIManager:object({mPlayerCommonPawnNative:native,mUserData:object({money,safeMoney:money,carriedMoney:0}),mCommonStatusMenuPart:object({}),mItemInfoManager:object({}),mEdgeInput:0,
-    mCommonTopMenu2:object({selected:ammoOnly?5:6,idle:true,cancel:false}),mGameInfoNative:object({hide:false}),mSystemWindow:object({done:false,cancel:false,yes:0})})});
+  mUIManager:object({mPlayerCommonPawnNative:native,mSkillExchange:null,mUserData:object({money,safeMoney:money,carriedMoney:0}),mCommonStatusMenuPart:object({}),mItemInfoManager:object({}),mEdgeInput:0,
+    mCommonTopMenu2:object({selected:(ammoOnly?5:6)+(modern?1:0),idle:true,cancel:false}),mGameInfoNative:object({hide:false}),mSystemWindow:object({done:false,cancel:false,yes:0})})});
  f.calls=[];
  f.run=(name,locals={})=>execute(compiled.get(name),f,locals,(n,a,target)=>{
   f.calls.push({n,a});
@@ -25,10 +26,12 @@ function fixture(stock=[weapon('a')],money=10000){
   if(n==='SetUnitDisableSelectForce'){target.mUnits[a[0]].disabled=a[1];return;}
   if(n==='CheckDisableSelect')return !!target.mUnits[a[0]].disabled;
   if(n==='DeathBag_SearchPart_Eptid')return target.mDeathBag.findIndex(x=>x.mDbPsPart?.mEptid===a[0]);
-  if(n==='GetShopState')return a[0]-18;
-  if(n==='GetAdjustShopState')return a[0]+18;
-  if(n==='StartWaitShopState'){f.mState=18+a[1];f.mStateFirst=true;return;}
-  if(n==='StartUpdateResearch'){f.mState=33;f.next=a[0];f.mStateFirst=true;return;}
+  if(n==='GetShopState')return a[0]-stateBase;
+  if(n==='GetAdjustShopState')return a[0]+stateBase;
+  if(n==='StartWaitShopState'){f.mState=stateBase+a[1];f.mStateFirst=true;return;}
+  if(n==='StartUpdateResearch'){f.mState=stateBase+15;f.next=a[0];f.mStateFirst=true;return;}
+  if(n==='NewObject')return object({$class:'BrgUIMenu_SkillExchange'});
+  if(n==='Initialize'||n==='StartSkillExchange')return;
   if(n==='SellItem'){assert.equal(f.run(sb+n).returned,true);return;}
   if(n==='GetSelectIndex')return target===f.mItemSelect?f.mSellMenuSelectIndex:target.selected;
   if(n==='CheckEnd')return target.done;
@@ -46,7 +49,7 @@ function fixture(stock=[weapon('a')],money=10000){
  f.list=()=>f.run(sb+'AddSellCurrentFighterItemSelectPanel');
  return f;
 }
-test('compiled insertions have valid runtime size, context skips and branch targets',()=>assert.equal(compiled.size,ammoOnly?5:10));
+test('compiled insertions have valid runtime size, context skips and branch targets',()=>assert.equal(compiled.size,(ammoOnly?5:10)+(modern?1:0)));
 test('normal shop and ordinary selling paths bypass the ammo insertion',()=>{
  for(const cls of ['BrgUIMenu_PartShop','BrgUIMenu_ItemVendingMachine'])for(const name of ['SellItem','TickASync','AddSellCurrentFighterItemSelectPanel']){
   const f=fixture();f.$class=cls;f.mTopMenuSelectIndex=0;assert.equal(f.run(sb+name).returned,false);assert.equal(f.calls.length,0);
@@ -88,24 +91,24 @@ test('repeat confirmation, stale quotes, vanished items, money loss or failed de
 });
 test('actual confirmation script cancels without charging; saves once on acceptance',()=>{
  for(const cancel of ['back','no','yes']){
-  const f=fixture();f.list();f.mState=32;const dialog=f.mUIManager.mSystemWindow;dialog.done=true;dialog.cancel=cancel==='back';dialog.yes=cancel==='no'?1:0;
+  const f=fixture();f.list();f.mState=stateBase+14;const dialog=f.mUIManager.mSystemWindow;dialog.done=true;dialog.cancel=cancel==='back';dialog.yes=cancel==='no'?1:0;
   assert.equal(f.run(sb+'TickASync').returned,true);
   assert.equal(f.mUIManager.mUserData.money,cancel==='yes'?0:10000);
-  assert.equal(f.mState,cancel==='yes'?33:31);
+  assert.equal(f.mState,cancel==='yes'?stateBase+15:stateBase+13);
   if(cancel==='yes'){
-   assert.equal(f.next,30);assert.equal(f.run(sb+'TickASync').returned,false);
-   f.mState=34;assert.equal(f.run(sb+'TickASync').returned,false);
+   assert.equal(f.next,stateBase+12);assert.equal(f.run(sb+'TickASync').returned,false);
+   f.mState=stateBase+16;assert.equal(f.run(sb+'TickASync').returned,false);
    assert.equal(f.calls.filter(c=>c.n==='SetSafeMoney').length,1);
   }
  }
 });
 test('ammo selection disables top input and enters existing save/list path, menu IDs include exit',()=>{
  const f=fixture();f.mState=8;f.mTopMenuSelectIndex=0;
- assert.equal(f.run(vd+'TickASync').returned,true);assert.equal(f.mTopMenuSelectIndex,7);assert.equal(f.mState,33);assert.equal(f.next,30);
+ assert.equal(f.run(vd+'TickASync').returned,true);assert.equal(f.mTopMenuSelectIndex,ammoMenu);assert.equal(f.mState,stateBase+15);assert.equal(f.next,stateBase+12);
  assert.equal(f.mUIManager.mCommonTopMenu2.disabled,true);assert.equal(f.mUIManager.mCommonTopMenu2.ended,true);
  for(const buy of [true,false])for(const hide of [true,false]){
-  f.mBuyOnly=buy;f.mUIManager.mGameInfoNative.hide=hide;const last=buy?1:hide?4:5;
-  for(const [offset,value] of (ammoOnly?[[0,7],[1,5]]:[[0,6],[1,7],[2,5]]))assert.equal(f.run(vd+'GetMenuDefinition',{Index:last+offset}).value,value);
+  f.mBuyOnly=buy;f.mUIManager.mGameInfoNative.hide=hide;const last=buy?1:(hide?4:5)+(modern?1:0);
+  for(const [offset,value] of (ammoOnly?[[0,ammoMenu],[1,5]]:[[0,decalMenu],[1,ammoMenu],[2,5]]))assert.equal(f.run(vd+'GetMenuDefinition',{Index:last+offset}).value,value);
  }
 });
 test('cancel and sort inputs never enter the destructive sale-sort path',()=>{
@@ -135,4 +138,32 @@ test('carried coins do not substitute for an insufficient safe balance',()=>{
  f.list();assert.equal(f.mItemSelect.mUnits[0].disabled,true);
  f.run(sb+'SellItem');assert.equal(f.mUIManager.mUserData.safeMoney,0);
  assert.equal(f.mUIManager.mUserData.carriedMoney,100000);
+});
+test('5.0.6 appends custom entries after the vanilla Deathroid entry without altering it',{skip:!modern},()=>{
+ const setup=compile(plan.patches.find(p=>p.name===vd+'SetupTopMenu'),plan.testSymbols),base=Array.from({length:6},(_,i)=>({mIcon:i===5?50:i,mName:i===5?'VENDER.TXT_DS_DISASSEMBLE':'vanilla-'+i})),locals={lUnitArray:structuredClone(base)};
+ execute(setup,fixture(),locals,()=>{throw Error('setup insertion made unexpected native call');});
+ assert.deepEqual(locals.lUnitArray.slice(0,6),base);assert.equal(locals.lUnitArray.length,ammoOnly?7:8);
+ assert.equal(locals.lUnitArray.at(-1).mIcon,7);
+ const english=(process.env.LID_TEST_GAME_LANGUAGE||'ko')==='en';
+ assert.equal(locals.lUnitArray.at(-1).mName.trim(),english?'Ammo (20% cost)':'탄약 충전 (구입가 20%)');
+ if(!ammoOnly){assert.equal(locals.lUnitArray[6].mIcon,11);assert.equal(locals.lUnitArray[6].mName.trim(),english?'Decals':'데칼 교체 / 탈착');}
+});
+test('5.0.6 vanilla disassembly states 16..22 fall through every custom UI prefix',{skip:!modern},()=>{
+ for(let state=16;state<=22;state++){
+  const f=fixture();f.mState=state;f.mTopMenuSelectIndex=0;
+  for(const name of ['TickASync',...(!ammoOnly?['Tick','Render']:[])])assert.equal(f.run(vd+name).returned,false,name+' state '+state);
+  assert.equal(f.mState,state);assert.equal(f.calls.length,0);assert.equal(f.mUIManager.mUserData.money,10000);
+ }
+});
+test('5.0.6 vanilla Deathroid menu row is not captured by custom menu handlers',{skip:!modern},()=>{
+ const f=fixture();f.mBuyOnly=false;f.mUIManager.mGameInfoNative.hide=false;f.mState=8;f.mTopMenuSelectIndex=0;f.mUIManager.mCommonTopMenu2.selected=5;
+ assert.equal(f.run(vd+'GetMenuDefinition',{Index:5}).returned,false);
+ assert.equal(f.run(vd+'TickASync').returned,false);assert.equal(f.mTopMenuSelectIndex,0);assert.equal(f.mState,8);assert(!f.calls.some(c=>c.n==='SetSafeMoney'||c.n==='StartUpdateResearch'||c.n==='NewObject'));
+});
+test('5.0.6 decal modal uses state 23 and closes back to normal state 7',{skip:!modern||ammoOnly},()=>{
+ const f=fixture();f.mState=8;f.mTopMenuSelectIndex=0;f.mUIManager.mCommonTopMenu2.selected=6;
+ assert.equal(f.run(vd+'TickASync').returned,true);assert.equal(f.mState,23);assert.equal(f.mUIManager.mSkillExchange.$class,'BrgUIMenu_SkillExchange');assert.equal(f.mUIManager.mSkillExchange.mTopMenu,250);
+ assert.equal(f.run(vd+'Tick').returned,true);assert.equal(f.run(vd+'Render').returned,true);
+ f.mUIManager.mSkillExchange=null;assert.equal(f.run(vd+'TickASync').returned,true);assert.equal(f.mState,7);assert.equal(f.mStateFirst,true);assert.equal(f.mTopMenuSelectIndex,0);assert.equal(f.mUIManager.mUserData.money,10000);
+ assert.equal(f.run(vd+'TickASync').returned,false);
 });
