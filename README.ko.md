@@ -56,7 +56,7 @@ TFC판은 이번 수정 대상이 아닙니다. 새 탄약 전용 구성은 이�
 Nico·TFC의 실제 처리 엔진과 파일 복사본으로 검증했습니다. 이번 변경의 GUI·실게임 재검증은 미완료입니다.
 기존판과 TFC판은 별도 ZIP이며 혼용하지 마세요. [검증 범위와 한계](COMPATIBILITY-VALIDATION.md).
 
-TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.2-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
+TFC 전용판은 [별도 릴리스](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.4-rc.1)로 받으세요. 저장소의 tfc/ 폴더는 독립형 ZIP에 포함하지 않습니다. 두 설치 방식을 혼용하지 마세요.
 
 ## 이번 일반판 수정 — 적용 판정·누락 복구·백업 안내
 

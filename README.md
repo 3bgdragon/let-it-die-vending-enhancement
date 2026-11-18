@@ -54,7 +54,7 @@ TFC users must create a NEW preparation folder with this version, not reuse an
 old prepared package. [Exact scope and tests](FOREIGN-UI-VALIDATION.md).
 No gameplay settings or DB recipes were changed by this fix.
 
-TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.2-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
+TFC edition: [separate download](https://github.com/3bgdragon/let-it-die-vending-enhancement/releases/tag/tfc-v1.2.4-rc.1). The repository's `tfc/` is isolated; it is NOT included in the standalone ZIP. Do not mix installation modes.
 
 Previous standalone candidate **1.1.6-rc.1**: validates the actual material catalog before
 skipping reapplication, repairs missing owned rows with a backup, and clearly
